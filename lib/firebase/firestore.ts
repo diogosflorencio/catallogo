@@ -11,8 +11,13 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  getFirestore,
 } from "firebase/firestore";
-import { db } from "./config";
+import { getApp } from "firebase/app";
+
+// Firestore instance a partir do app inicializado em lib/firebase/init.ts
+// getApp() assume que o app já foi criado no client; evita depender de './config'
+const db = getFirestore(getApp());
 
 // Types
 export interface UserProfile {
