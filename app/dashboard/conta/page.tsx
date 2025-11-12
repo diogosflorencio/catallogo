@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { checkUsernameExists } from "@/lib/supabase/database";
@@ -15,10 +15,33 @@ import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
 import Link from "next/link";
 
+function CheckoutHandler({ onConfirm }: { onConfirm: (sessionId: string) => void }) {
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const [hasHandled, setHasHandled] = useState(false);
+
+  useEffect(() => {
+    if (hasHandled) return;
+    
+    const success = searchParams.get("success");
+    const sessionId = searchParams.get("session_id");
+
+    if (
+      user &&
+      success === "true" &&
+      sessionId
+    ) {
+      onConfirm(sessionId);
+      setHasHandled(true);
+    }
+  }, [searchParams, user, onConfirm, hasHandled]);
+
+  return null;
+}
+
 export default function ContaPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,21 +63,6 @@ export default function ContaPage() {
       loadData();
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    const success = searchParams.get("success");
-    const sessionId = searchParams.get("session_id");
-
-    if (
-      user &&
-      success === "true" &&
-      sessionId &&
-      !checkoutConfirmed
-    ) {
-      confirmCheckout(sessionId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, user, checkoutConfirmed]);
 
   async function loadData() {
     if (!user) return;
@@ -219,6 +227,9 @@ export default function ContaPage() {
 
   return (
     <DashboardLayout profile={profile}>
+      <Suspense fallback={<div className="hidden" />}>
+        <CheckoutHandler onConfirm={confirmCheckout} />
+      </Suspense>
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Perfil */}
         <motion.div
@@ -275,134 +286,4 @@ export default function ContaPage() {
                 }
                 placeholder="11987654321"
               />
-            </div>
-            <div>
-              <label className="block mb-2 font-medium">
-                Template de Mensagem WhatsApp
-              </label>
-              <Textarea
-                value={formData.mensagemTemplate}
-                onChange={(e) =>
-                  setFormData({ ...formData, mensagemTemplate: e.target.value })
-                }
-                placeholder="Olá! Vi o produto {{produtoNome}} no seu Catallogo 💖"
-                rows={3}
-              />
-              <p className="text-sm text-foreground/60 mt-1">
-                Use {"{{produtoNome}}"} para incluir o nome do produto
-              </p>
-            </div>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Tema e Aparência */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-background-alt rounded-xl p-6"
-        >
-          <h2 className="text-2xl font-display font-semibold mb-6">
-            Tema e Aparência
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-2 font-medium">Tema do Site</label>
-              <p className="text-sm text-foreground/60 mb-4">
-                O tema atual é otimizado para uma experiência suave e feminina. 
-                Personalizações de tema estarão disponíveis em breve.
-              </p>
-              <div className="flex gap-3">
-                <div className="flex-1 p-4 rounded-lg border-2 border-primary bg-primary/10">
-                  <p className="font-semibold mb-1">Tema Padrão</p>
-                  <p className="text-xs text-foreground/60">Suave e feminino</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Planos */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-background-alt rounded-xl p-6"
-        >
-          <h2 className="text-2xl font-display font-semibold mb-6">
-            Planos e Assinatura
-          </h2>
-          <div className="mb-4">
-            <p className="text-foreground/70">
-              Plano atual: <span className="font-semibold capitalize">{profile.plano || 'free'}</span>
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {Object.entries(PLANS).map(([key, plan]) => {
-              const isCurrent = profile.plano === key;
-              const isUpgrade =
-                (profile.plano === "free" && key !== "free") ||
-                (profile.plano === "pro" && key === "premium");
-              return (
-                <div
-                  key={key}
-                  className={`rounded-xl p-6 border-2 ${
-                    isCurrent
-                      ? "border-primary bg-primary/10"
-                      : "border-blush/30 bg-background"
-                  }`}
-                >
-                  <h3 className="text-xl font-display font-semibold mb-2">
-                    {plan.name}
-                  </h3>
-                  <p className="text-3xl font-semibold mb-4">
-                    {plan.price === 0 ? "Grátis" : formatPrice(plan.price)}
-                    {plan.price > 0 && <span className="text-sm">/mês</span>}
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="text-sm text-foreground/70">
-                        ✓ {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrent ? (
-                    <Button variant="outline" disabled className="w-full">
-                      Plano Atual
-                    </Button>
-                  ) : isUpgrade ? (
-                    <Button
-                      onClick={() => handleUpgrade(key as PlanType)}
-                      className="w-full"
-                    >
-                      Assinar
-                    </Button>
-                  ) : (
-                    <Button variant="outline" disabled className="w-full">
-                      Downgrade
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Sair  */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button variant="outline" onClick={handleSignOut}>
-            Sair da Conta
-          </Button>
-        </motion.div>
-      </div>
-    </DashboardLayout>
-  );
-}
-
+           
