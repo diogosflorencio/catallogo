@@ -244,7 +244,7 @@ export default function HomePage() {
       {/* Footer Minimalista */}
       <footer className="border-t border-blush/20 py-4 flex-shrink-0">
         <div className="container mx-auto px-4 text-center text-foreground/60 text-sm">
-          <p>© 2024 Catallogo. Todos os direitos reservados.</p>
+          <p>© 2025 Catallogo. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>
