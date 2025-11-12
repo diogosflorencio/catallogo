@@ -15,7 +15,6 @@ import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
 import Link from "next/link";
-import type { Stripe as StripeJs } from "@stripe/stripe-js";
 
 export default function ContaPage() {
   const { user, loading } = useAuth();
@@ -150,7 +149,7 @@ export default function ContaPage() {
       });
 
       const { sessionId } = await response.json();
-      const stripe = (await stripePromise) as StripeJs | null;
+      const stripe = await stripePromise;
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId });
       }
