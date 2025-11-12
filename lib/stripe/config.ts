@@ -5,7 +5,7 @@ export const stripePromise: Promise<StripeJs | null> = loadStripe(
 );
 
 export async function redirectToCheckoutClient(sessionId: string): Promise<void> {
-	const stripe = await stripePromise;
+	const stripe: StripeJs | null = await stripePromise;
 	if (!stripe) {
 		throw new Error("Stripe.js não carregou");
 	}
