@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { PLANS, PlanType } from "@/lib/stripe/config";
-import { stripePromise } from "@/lib/stripe/config";
+import { redirectToCheckoutClient } from "@/lib/stripe/config";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
@@ -149,10 +149,7 @@ export default function ContaPage() {
       });
 
       const { sessionId } = await response.json();
-      const stripe = await stripePromise;
-      if (stripe) {
-        await stripe.redirectToCheckout({ sessionId });
-      }
+      await redirectToCheckoutClient(sessionId);
     } catch (error) {
       console.error("Erro ao iniciar checkout:", error);
     }

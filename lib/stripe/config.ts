@@ -4,6 +4,14 @@ export const stripePromise: Promise<StripeJs | null> = loadStripe(
 	process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
 );
 
+export async function redirectToCheckoutClient(sessionId: string): Promise<void> {
+	const stripe = await stripePromise;
+	if (!stripe) {
+		throw new Error("Stripe.js não carregou");
+	}
+	await stripe.redirectToCheckout({ sessionId });
+}
+
 export const PLANS = {
   free: {
     name: "Free",
