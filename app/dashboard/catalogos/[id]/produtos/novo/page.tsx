@@ -101,11 +101,13 @@ export default function NovoProdutoPage({
     // Upload
     setUploading(true);
     try {
+      const token = await user.getIdToken();
       const path = `produtos/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadImage(file, path);
+      const url = await uploadImage(file, path, token);
       setFormData({ ...formData, imagemUrl: url });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer upload:", error);
+      alert(error.message || "Erro ao fazer upload da imagem. Verifique se o bucket 'produtos' está configurado no Supabase.");
     } finally {
       setUploading(false);
     }

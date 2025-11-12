@@ -4,8 +4,38 @@ import { supabase } from "@/lib/supabase/client";
 
 export async function uploadImage(
   file: File,
-  path: string
+  path: string,
+  token?: string
 ): Promise<string> {
+  // Tentar upload via API route primeiro (mais seguro e confiável)
+  if (token) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.url;
+      } else {
+        const error = await response.json();
+        console.warn("Upload via API falhou, tentando método direto:", error);
+        // Continuar para método direto como fallback
+      }
+    } catch (error) {
+      console.warn("Erro ao fazer upload via API, tentando método direto:", error);
+      // Continuar para método direto como fallback
+    }
+  }
+
+  // Fallback: upload direto (requer bucket público e políticas corretas)
   if (!supabase) {
     throw new Error("Supabase não está configurado. Configure as variáveis de ambiente no arquivo .env.local");
   }
@@ -23,6 +53,13 @@ export async function uploadImage(
       });
 
     if (error) {
+      // Mensagem de erro mais clara
+      if (error.message.includes("Bucket not found") || error.message.includes("does not exist")) {
+        throw new Error(
+          "Bucket 'produtos' não encontrado no Supabase. " +
+          "Vá em Supabase > Storage > Create bucket > Nome: 'produtos' > Público: Sim"
+        );
+      }
       throw error;
     }
 
@@ -32,7 +69,7 @@ export async function uploadImage(
       .getPublicUrl(data.path);
 
     return urlData.publicUrl;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao fazer upload da imagem:", error);
     throw error;
   }

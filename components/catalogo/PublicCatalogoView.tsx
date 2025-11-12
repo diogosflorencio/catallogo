@@ -6,7 +6,8 @@ import { formatPrice } from "@/lib/utils";
 import { trackEvent } from "@/lib/supabase/client";
 import { UserProfile, Catalogo, Produto } from "@/lib/supabase/database";
 import { MessageCircle, ExternalLink } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ProductModal } from "./ProductModal";
 
 interface PublicCatalogoViewProps {
   data: {
@@ -20,6 +21,8 @@ interface PublicCatalogoViewProps {
 
 export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalogoViewProps) {
   const { catalogo, produtos, user } = data;
+  const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Registrar visualização
   useEffect(() => {
@@ -30,6 +33,11 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
       timestamp: new Date(),
     }).catch(console.error);
   }, [username, catalogSlug]);
+
+  function handleProductClick(produto: Produto) {
+    setSelectedProduct(produto);
+    setIsModalOpen(true);
+  }
 
   function handleWhatsAppClick(produto: Produto) {
     const message = replaceTemplateVariables(user.mensagem_template, {
@@ -96,19 +104,21 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                onClick={() => handleProductClick(produto)}
               >
                 {produto.imagem_url && (
                   <div className="aspect-square relative overflow-hidden">
                     <img
                       src={produto.imagem_url}
                       alt={produto.nome}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                   </div>
                 )}
                 <div className="p-4">
-                  <h3 className="font-display font-semibold mb-1">
+                  <h3 className="font-display font-semibold mb-1 line-clamp-1">
                     {produto.nome}
                   </h3>
                   {produto.descricao && (
@@ -121,25 +131,8 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
                       {formatPrice(Number(produto.preco))}
                     </p>
                   )}
-                  <div className="flex flex-col gap-2">
-                    {produto.link_externo && (
-                      <a
-                        href={produto.link_externo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full bg-primary hover:bg-primary/90 text-foreground rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Ver Produto
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleWhatsAppClick(produto)}
-                      className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Falar no WhatsApp
-                    </button>
+                  <div className="text-xs text-foreground/50">
+                    Clique para ver mais detalhes
                   </div>
                 </div>
               </motion.div>
@@ -154,6 +147,20 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
           <p>Powered by Catallogo</p>
         </div>
       </footer>
+
+      {/* Product Modal */}
+      {selectedProduct && (
+        <ProductModal
+          produto={selectedProduct}
+          user={user}
+          catalogSlug={catalogSlug}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setTimeout(() => setSelectedProduct(null), 300);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -111,26 +111,29 @@ export default function EditarProdutoPage({
     };
     reader.readAsDataURL(file);
 
-    // Upload
-    setUploading(true);
-    try {
-      // Deletar imagem antiga se existir
-      if (formData.imagemUrl) {
-        try {
-          await deleteImage(formData.imagemUrl);
-        } catch (error) {
-          console.error("Erro ao deletar imagem antiga:", error);
+      // Upload
+      setUploading(true);
+      try {
+        const token = await user.getIdToken();
+        
+        // Deletar imagem antiga se existir
+        if (formData.imagemUrl) {
+          try {
+            await deleteImage(formData.imagemUrl);
+          } catch (error) {
+            console.error("Erro ao deletar imagem antiga:", error);
+          }
         }
-      }
 
-      const path = `produtos/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadImage(file, path);
-      setFormData({ ...formData, imagemUrl: url });
-    } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-    } finally {
-      setUploading(false);
-    }
+        const path = `produtos/${user.uid}/${Date.now()}_${file.name}`;
+        const url = await uploadImage(file, path, token);
+        setFormData({ ...formData, imagemUrl: url });
+      } catch (error: any) {
+        console.error("Erro ao fazer upload:", error);
+        alert(error.message || "Erro ao fazer upload da imagem. Verifique se o bucket 'produtos' está configurado no Supabase.");
+      } finally {
+        setUploading(false);
+      }
   }, [user, formData]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
