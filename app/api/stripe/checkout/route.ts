@@ -41,7 +41,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ sessionId: session.id });
+    if (!session.url) {
+      console.error("Stripe session created without URL", session);
+      return NextResponse.json(
+        { error: "Não foi possível iniciar o checkout." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ sessionId: session.id, sessionUrl: session.url });
   } catch (error: any) {
     console.error("Erro ao criar sessão Stripe:", error);
     return NextResponse.json(

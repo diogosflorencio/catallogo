@@ -1,18 +1,3 @@
-import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
-
-export const stripePromise: Promise<StripeJs | null> = loadStripe(
-	process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
-);
-
-export async function redirectToCheckoutClient(sessionId: string): Promise<void> {
-	const stripe = await stripePromise;
-	if (!stripe) {
-		throw new Error("Stripe.js não carregou");
-	}
-	// Bypass de tipagem no ambiente de build do Vercel para garantir chamada ao método do client
-	await (stripe as any).redirectToCheckout({ sessionId });
-}
-
 export const PLANS = {
   free: {
     name: "Free",
