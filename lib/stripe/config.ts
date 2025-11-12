@@ -5,11 +5,12 @@ export const stripePromise: Promise<StripeJs | null> = loadStripe(
 );
 
 export async function redirectToCheckoutClient(sessionId: string): Promise<void> {
-	const stripe: StripeJs | null = await stripePromise;
+	const stripe = await stripePromise;
 	if (!stripe) {
 		throw new Error("Stripe.js não carregou");
 	}
-	await stripe.redirectToCheckout({ sessionId });
+	// Forçar o tipo do client do @stripe/stripe-js para evitar conflito com tipos do SDK de servidor no Vercel
+	await (stripe as StripeJs).redirectToCheckout({ sessionId });
 }
 
 export const PLANS = {
