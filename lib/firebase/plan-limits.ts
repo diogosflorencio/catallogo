@@ -6,12 +6,11 @@ export function checkCatalogLimit(
   currentCatalogCount: number
 ): { allowed: boolean; limit: number } {
   const plan = PLANS[profile.plano];
-  // Premium: mostrado como "ilimitado" mas limitado a 50 no código
-  // Outros planos: usar o valor direto
-  const limit = plan.catalogos === -1 ? 50 : plan.catalogos;
+  // Usar o limite definido em PLANS (já controla casos de 'ilimitado' via número alto)
+  const limit = plan.catalogos;
   return {
     allowed: currentCatalogCount < limit,
-    limit: plan.catalogos === -1 ? 50 : plan.catalogos,
+    limit: plan.catalogos,
   };
 }
 
@@ -21,13 +20,12 @@ export function checkProductLimit(
   catalogoId?: string
 ): { allowed: boolean; limit: number } {
   const plan = PLANS[profile.plano];
-  // Pro e Premium: mostrado como "ilimitado" mas limitado a 100 no código
-  // Free: 3 produtos por catálogo
-  const limit = plan.produtos === -1 ? 100 : plan.produtos;
+  // Usar o limite definido em PLANS
+  const limit = plan.produtos;
   
   return {
     allowed: currentProductCount < limit,
-    limit: plan.produtos === -1 ? 100 : plan.produtos,
+    limit: plan.produtos,
   };
 }
 
