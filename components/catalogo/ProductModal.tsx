@@ -130,7 +130,7 @@ export function ProductModal({
               <div className="p-4 space-y-4">
                 {/* Image */}
                 {produto.imagem_url && (
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt">
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt group">
                     {!imageLoaded && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="animate-pulse bg-blush/20 w-full h-full" />
@@ -139,21 +139,39 @@ export function ProductModal({
                     <img
                       src={produto.imagem_url}
                       alt={produto.nome}
-                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                      className={`w-full h-full object-cover transition-all duration-300 ${
                         imageLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      } group-hover:scale-105`}
                       onLoad={() => setImageLoaded(true)}
                     />
+                    {/* Overlay gradient para melhorar legibilidade */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
+
+                {/* Price - destacado se não tiver descrição */}
+                {produto.preco && !produto.descricao && (
+                  <div className="text-center py-4">
+                    <p className="text-3xl font-bold text-primary">
+                      {formatPrice(Number(produto.preco))}
+                    </p>
                   </div>
                 )}
 
                 {/* Description */}
                 {produto.descricao && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Descrição</h3>
-                    <p className="text-foreground/70 whitespace-pre-line">
+                  <div className="bg-background-alt/50 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2 text-foreground">Descrição</h3>
+                    <p className="text-foreground/70 whitespace-pre-line leading-relaxed">
                       {produto.descricao}
                     </p>
+                    {produto.preco && (
+                      <div className="mt-4 pt-4 border-t border-blush/20">
+                        <p className="text-2xl font-bold text-primary">
+                          {formatPrice(Number(produto.preco))}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
