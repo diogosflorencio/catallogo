@@ -9,8 +9,8 @@ export async function redirectToCheckoutClient(sessionId: string): Promise<void>
 	if (!stripe) {
 		throw new Error("Stripe.js não carregou");
 	}
-	// Forçar o tipo do client do @stripe/stripe-js para evitar conflito com tipos do SDK de servidor no Vercel
-	await (stripe as StripeJs).redirectToCheckout({ sessionId });
+	// Bypass de tipagem no ambiente de build do Vercel para garantir chamada ao método do client
+	await (stripe as any).redirectToCheckout({ sessionId });
 }
 
 export const PLANS = {
