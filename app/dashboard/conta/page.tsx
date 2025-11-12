@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { checkUsernameExists } from "@/lib/supabase/database";
 import { UserProfile } from "@/lib/supabase/database";
@@ -18,6 +18,8 @@ import Link from "next/link";
 export default function ContaPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -38,6 +40,21 @@ export default function ContaPage() {
       loadData();
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const sessionId = searchParams.get("session_id");
+
+    if (
+      user &&
+      success === "true" &&
+      sessionId &&
+      !checkoutConfirmed
+    ) {
+      confirmCheckout(sessionId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user, checkoutConfirmed]);
 
   async function loadData() {
     if (!user) return;
@@ -138,6 +155,29 @@ export default function ContaPage() {
     }
   }
 
+  async function confirmCheckout(sessionId: string) {
+    try {
+      const response = await fetch("/api/stripe/checkout/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!response.ok) {
+        console.error("Erro ao confirmar assinatura:", await response.text());
+        return;
+      }
+
+      await loadData();
+      setCheckoutConfirmed(true);
+      router.replace("/dashboard/conta?success=true");
+    } catch (error) {
+      console.error("Erro ao confirmar assinatura:", error);
+    }
+  }
+
   async function handleUpgrade(plan: PlanType) {
     if (!user) return;
     try {
@@ -147,9 +187,12 @@ export default function ContaPage() {
         body: JSON.stringify({ plan, userId: user.uid }),
       });
 
-      const { sessionUrl } = await response.json();
+      const { sessionUrl, sessionId } = await response.json();
       if (!sessionUrl) {
         throw new Error("URL da sessão Stripe não recebida.");
+      }
+      if (sessionId) {
+        setCheckoutConfirmed(false);
       }
       window.location.href = sessionUrl;
     } catch (error) {

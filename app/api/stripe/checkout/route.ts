@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "subscription",
-      success_url: `${request.nextUrl.origin}/dashboard/conta?success=true`,
+      success_url: `${request.nextUrl.origin}/dashboard/conta?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/dashboard/conta?canceled=true`,
       metadata: {
         userId,
@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ sessionId: session.id, sessionUrl: session.url });
+    return NextResponse.json({
+      sessionId: session.id,
+      sessionUrl: session.url,
+    });
   } catch (error: any) {
     console.error("Erro ao criar sessão Stripe:", error);
     return NextResponse.json(
