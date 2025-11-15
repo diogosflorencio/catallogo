@@ -574,7 +574,6 @@ function ContaPageContent() {
         showCancel={false}
         variant="default"
       />
-      </div>
       </DashboardLayout>
     </ThemeProvider>
   );
