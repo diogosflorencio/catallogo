@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
         userId,
         plan,
       },
-      // Permitir que o Stripe crie o customer automaticamente
-      customer_creation: "always",
+      // No modo "subscription", o Stripe cria o customer automaticamente
     });
 
     if (!session.url) {
