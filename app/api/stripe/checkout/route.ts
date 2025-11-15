@@ -50,6 +50,26 @@ export async function POST(request: NextRequest) {
 
     console.log(`📝 [Stripe Checkout] Criando sessão para plano ${plan} com Price ID: ${priceId}`);
 
+    // Verificar se o Price ID existe e está ativo no Stripe
+    try {
+      const price = await stripe.prices.retrieve(priceId);
+      console.log(`✅ [Stripe Checkout] Price encontrado: ${price.id}, Ativo: ${price.active}, Moeda: ${price.currency}`);
+      
+      if (!price.active) {
+        console.error(`❌ [Stripe Checkout] Price ${priceId} não está ativo!`);
+        return NextResponse.json(
+          { error: "O plano selecionado não está disponível. Entre em contato com o suporte." },
+          { status: 400 }
+        );
+      }
+    } catch (priceError: any) {
+      console.error(`❌ [Stripe Checkout] Erro ao verificar Price ID:`, priceError);
+      return NextResponse.json(
+        { error: `Price ID inválido ou não encontrado. Verifique a configuração.` },
+        { status: 400 }
+      );
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -59,6 +79,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "subscription",
+      locale: "pt-BR", // Configurar locale para português brasileiro (resolve erro "Cannot find module './en'")
       success_url: `${request.nextUrl.origin}/dashboard/conta?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/dashboard/conta?canceled=true`,
       metadata: {
@@ -66,6 +87,9 @@ export async function POST(request: NextRequest) {
         plan,
       },
       // No modo "subscription", o Stripe cria o customer automaticamente
+      // Configurações adicionais para melhor compatibilidade
+      billing_address_collection: "auto",
+      allow_promotion_codes: false,
     });
 
     if (!session.url) {
