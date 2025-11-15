@@ -15,6 +15,8 @@ export interface UserProfile {
   mensagem_template: string;
   theme: "light" | "dark" | null; // Tema preferido do usuário (null = usar preferência do sistema)
   appearance: "feminine" | "masculine" | null; // Aparência: feminino (rosa) ou masculino (azul)
+  stripe_customer_id: string | null; // ID do customer no Stripe
+  stripe_subscription_id: string | null; // ID da subscription no Stripe
   created_at: string;
   last_active_at: string | null;
 }

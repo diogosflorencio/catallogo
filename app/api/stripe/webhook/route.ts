@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { updateUserProfile } from "@/lib/supabase/database";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 });
@@ -39,9 +40,50 @@ export async function POST(request: NextRequest) {
 
         if (userId && plan) {
           console.log(`✅ [Webhook] Checkout completado - Usuário: ${userId}, Plano: ${plan}`);
+          
+          // Obter customer_id e subscription_id da sessão
+          // No modo subscription, o Stripe cria automaticamente customer e subscription
+          let customerId: string | null = null;
+          let subscriptionId: string | null = null;
+
+          // session.customer pode ser string (ID) ou objeto Customer expandido
+          if (session.customer) {
+            customerId = typeof session.customer === "string" 
+              ? session.customer 
+              : (session.customer as Stripe.Customer).id;
+          }
+
+          // session.subscription pode ser string (ID) ou objeto Subscription expandido
+          if (session.subscription) {
+            subscriptionId = typeof session.subscription === "string" 
+              ? session.subscription 
+              : (session.subscription as Stripe.Subscription).id;
+          }
+
+          // Se não encontrou subscription_id na sessão, buscar no customer
+          if (customerId && !subscriptionId) {
+            try {
+              const subscriptions = await stripe.subscriptions.list({
+                customer: customerId,
+                status: "active",
+                limit: 1,
+              });
+              if (subscriptions.data.length > 0) {
+                subscriptionId = subscriptions.data[0].id;
+              }
+            } catch (error) {
+              console.warn("⚠️ [Webhook] Erro ao buscar subscriptions do customer:", error);
+            }
+          }
+
+          // Atualizar perfil com plano e IDs do Stripe
           await updateUserProfile(userId, {
             plano: plan as "free" | "pro" | "premium",
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
           });
+
+          console.log(`✅ [Webhook] IDs salvos - Customer: ${customerId}, Subscription: ${subscriptionId}`);
         } else {
           console.warn("⚠️ [Webhook] Checkout completado mas metadata incompleta:", { userId, plan });
         }
@@ -59,10 +101,32 @@ export async function POST(request: NextRequest) {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        // Quando a subscription é cancelada, fazer downgrade para free
-        // Nota: O customer_id precisa estar armazenado no perfil do usuário
-        // Por enquanto, o cancelamento é feito manualmente via /api/stripe/cancel
-        console.log(`ℹ️ [Webhook] Subscription deletada: ${subscription.id}`);
+        // subscription.customer pode ser string (ID) ou objeto Customer expandido
+        const customerId = typeof subscription.customer === "string" 
+          ? subscription.customer 
+          : (subscription.customer as Stripe.Customer).id;
+        
+        console.log(`ℹ️ [Webhook] Subscription deletada: ${subscription.id}, Customer: ${customerId}`);
+        
+        // Buscar usuário pelo stripe_customer_id
+        if (customerId) {
+          const { data: users } = await supabaseAdmin
+            .from("users")
+            .select("id")
+            .eq("stripe_customer_id", customerId)
+            .limit(1);
+          
+          if (users && users.length > 0) {
+            const userId = users[0].id;
+            await updateUserProfile(userId, {
+              plano: "free",
+              stripe_subscription_id: null, // Limpar subscription_id quando cancelada
+            });
+            console.log(`✅ [Webhook] Usuário ${userId} downgradeado para free após cancelamento`);
+          } else {
+            console.warn(`⚠️ [Webhook] Usuário não encontrado para customer_id: ${customerId}`);
+          }
+        }
         break;
       }
 

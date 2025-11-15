@@ -28,26 +28,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Você não possui uma assinatura ativa" }, { status: 400 });
     }
 
-    // IMPORTANTE: Cancelar assinatura no Stripe se houver customer_id
-    // Por enquanto, apenas fazemos downgrade para free no banco de dados
-    // Em produção, você deve:
-    // 1. Armazenar customer_id e subscription_id do Stripe no perfil do usuário
-    // 2. Buscar a subscription ativa no Stripe
-    // 3. Cancelar a subscription no Stripe usando: stripe.subscriptions.cancel(subscriptionId)
-    // 4. Aguardar o webhook confirmar o cancelamento antes de fazer downgrade
-    
-    // Por segurança, vamos fazer o downgrade imediatamente
-    // O webhook do Stripe também vai processar o cancelamento quando receber o evento
-    await updateUserProfile(userId, {
-      plano: "free",
-    });
+    // Verificar se há subscription_id no perfil
+    if (!profile.stripe_subscription_id) {
+      console.warn(`⚠️ [API /api/stripe/cancel] Usuário ${userId} não possui subscription_id. Fazendo downgrade apenas no banco.`);
+      await updateUserProfile(userId, {
+        plano: "free",
+      });
+      return NextResponse.json({ 
+        message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free.",
+        plan: "free"
+      });
+    }
 
-    console.log(`✅ [API /api/stripe/cancel] Plano cancelado para usuário ${userId}. Alterado para free.`);
+    // Cancelar subscription no Stripe
+    try {
+      // Cancelar imediatamente (cancel_at_period_end: false)
+      // Para testes - o usuário quer cancelamento imediato
+      const canceledSubscription = await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+      
+      console.log(`✅ [API /api/stripe/cancel] Subscription ${profile.stripe_subscription_id} cancelada no Stripe para usuário ${userId}`);
+      
+      // Fazer downgrade no banco imediatamente
+      // O webhook customer.subscription.deleted também vai processar quando o Stripe confirmar
+      await updateUserProfile(userId, {
+        plano: "free",
+        stripe_subscription_id: null, // Limpar subscription_id
+      });
 
-    return NextResponse.json({ 
-      message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free e você não será mais cobrado.",
-      plan: "free"
-    });
+      return NextResponse.json({ 
+        message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free e você não será mais cobrado.",
+        plan: "free"
+      });
+    } catch (stripeError: any) {
+      console.error(`❌ [API /api/stripe/cancel] Erro ao cancelar no Stripe:`, stripeError);
+      
+      // Se a subscription já foi cancelada ou não existe, fazer downgrade mesmo assim
+      if (stripeError.code === "resource_missing" || stripeError.statusCode === 404) {
+        await updateUserProfile(userId, {
+          plano: "free",
+          stripe_subscription_id: null,
+        });
+        return NextResponse.json({ 
+          message: "Assinatura cancelada. Seu plano foi alterado para Free.",
+          plan: "free"
+        });
+      }
+      
+      // Se houver outro erro, retornar erro
+      throw new Error(`Erro ao cancelar assinatura no Stripe: ${stripeError.message}`);
+    }
   } catch (error: any) {
     console.error("Erro ao cancelar assinatura:", error);
     return NextResponse.json(
