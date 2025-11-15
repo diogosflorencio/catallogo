@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const body = await request.json();
-    const { catalogoId, nome, slug, descricao, preco, imagem_url, imagens_urls, link_externo, visivel } = body;
+    const { catalogoId, nome, slug, descricao, preco, imagem_url, imagens_urls, visivel } = body;
 
     console.log("📝 [API /api/produtos/create] Recebido:", { userId, catalogoId, nome, slug });
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       preco: preco ? parseFloat(preco) : null,
       imagem_url: imagensUrls[0] || null, // Primeira imagem para compatibilidade
       imagens_urls: imagensUrls, // Array de imagens
-      link_externo: link_externo || null,
+      link_externo: null, // Sempre null - funcionalidade removida
       visivel: visivel !== undefined ? Boolean(visivel) : true,
     });
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Loading } from "@/components/ui/Loading";
 import { motion } from "framer-motion";
+import { Modal } from "@/components/ui/Modal";
 
 export default function UmPoucoSobreVocePage() {
   const { user, loading: authLoading } = useAuth();
@@ -21,6 +22,7 @@ export default function UmPoucoSobreVocePage() {
   const [usernameError, setUsernameError] = useState("");
   const [saving, setSaving] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     // Se não estiver logado, redirecionar para /perfil
@@ -83,7 +85,7 @@ export default function UmPoucoSobreVocePage() {
   async function handleNext() {
     if (step === 1) {
       if (!formData.nomeLoja.trim()) {
-        alert("Por favor, informe o nome da sua loja");
+        setErrorModal({ isOpen: true, message: "Por favor, informe o nome da sua loja" });
         return;
       }
       // Salvar nome da loja imediatamente
@@ -120,7 +122,7 @@ export default function UmPoucoSobreVocePage() {
       setStep(2);
     } else if (step === 2) {
       if (!formData.username.trim()) {
-        alert("Por favor, escolha um username");
+        setErrorModal({ isOpen: true, message: "Por favor, escolha um username" });
         return;
       }
       // Validar username
@@ -176,20 +178,20 @@ export default function UmPoucoSobreVocePage() {
 
   async function handleFinish() {
     if (!user) {
-      alert("Você precisa estar logado para continuar");
-      window.location.href = "/perfil";
+      setErrorModal({ isOpen: true, message: "Você precisa estar logado para continuar" });
+      setTimeout(() => window.location.href = "/perfil", 2000);
       return;
     }
     
     if (!formData.whatsappNumber.trim()) {
-      alert("Por favor, informe seu número do WhatsApp");
+      setErrorModal({ isOpen: true, message: "Por favor, informe seu número do WhatsApp" });
       return;
     }
 
     // Validar formato do WhatsApp (apenas números)
     const whatsappRegex = /^\d+$/;
     if (!whatsappRegex.test(formData.whatsappNumber.trim())) {
-      alert("O número do WhatsApp deve conter apenas números");
+      setErrorModal({ isOpen: true, message: "O número do WhatsApp deve conter apenas números" });
       return;
     }
 
@@ -229,7 +231,7 @@ export default function UmPoucoSobreVocePage() {
       window.location.href = "/dashboard";
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar dados. Tente novamente.");
+      setErrorModal({ isOpen: true, message: "Erro ao salvar dados. Tente novamente." });
     } finally {
       setSaving(false);
     }
@@ -383,6 +385,17 @@ export default function UmPoucoSobreVocePage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </div>
   );
 }

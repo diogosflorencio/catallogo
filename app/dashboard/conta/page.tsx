@@ -186,13 +186,13 @@ function ContaPageContent() {
       const updateResult = await updateResponse.json();
       console.log("✅ Perfil atualizado:", updateResult);
 
-      // Recarregar dados
-      await loadData();
-      
-      // Atualizar aparência no ThemeProvider imediatamente
+      // Atualizar aparência no ThemeProvider imediatamente ANTES de recarregar
       if (appearance) {
         setThemeAppearance(appearance);
       }
+
+      // Recarregar dados para garantir sincronização
+      await loadData();
       
       setSuccessModal({
         isOpen: true,

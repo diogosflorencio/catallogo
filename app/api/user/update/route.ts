@@ -50,11 +50,12 @@ export async function POST(request: NextRequest) {
     
     // Verificar se foi salvo corretamente
     const updatedProfile = await getUserProfile(userId);
-    console.log("✅ [API /api/user/update] Perfil atualizado com sucesso. custom_photo_url:", updatedProfile?.custom_photo_url);
+    console.log("✅ [API /api/user/update] Perfil atualizado com sucesso. custom_photo_url:", updatedProfile?.custom_photo_url, "appearance:", updatedProfile?.appearance);
     
     return NextResponse.json({ 
       message: "Perfil atualizado",
-      custom_photo_url: updatedProfile?.custom_photo_url 
+      custom_photo_url: updatedProfile?.custom_photo_url,
+      appearance: updatedProfile?.appearance
     });
   } catch (error: any) {
     console.error("Erro ao atualizar perfil:", error);

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { canCreateCatalog } from "@/lib/firebase/plan-limits";
 import { motion } from "framer-motion";
+import { Modal } from "@/components/ui/Modal";
 
 export default function NovoCatalogoPage() {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ export default function NovoCatalogoPage() {
     descricao: "",
     public: true,
   });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     // Exigir login
@@ -78,7 +80,7 @@ export default function NovoCatalogoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) {
-      alert("Você precisa fazer login para criar um catálogo");
+      setErrorModal({ isOpen: true, message: "Você precisa fazer login para criar um catálogo" });
       return;
     }
     if (!profile || !formData.nome.trim() || !formData.slug.trim()) {
@@ -87,7 +89,7 @@ export default function NovoCatalogoPage() {
 
     // Verificar limite do plano
     if (!canCreateCatalog(profile, catalogCount)) {
-      alert("Você atingiu o limite de catálogos do seu plano. Faça upgrade para criar mais.");
+      setErrorModal({ isOpen: true, message: "Você atingiu o limite de catálogos do seu plano. Faça upgrade para criar mais." });
       return;
     }
 
@@ -117,11 +119,11 @@ export default function NovoCatalogoPage() {
       } else {
         const errorData = await response.json();
         console.error("❌ [novo-catalogo] Erro ao criar catálogo:", errorData);
-        alert(`Erro ao criar catálogo: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({ isOpen: true, message: `Erro ao criar catálogo: ${errorData.error || "Erro desconhecido"}` });
       }
     } catch (error: any) {
       console.error("❌ [novo-catalogo] Erro ao criar catálogo:", error);
-      alert(`Erro ao criar catálogo: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({ isOpen: true, message: `Erro ao criar catálogo: ${error.message || "Erro desconhecido"}` });
     } finally {
       setSaving(false);
     }
@@ -226,6 +228,17 @@ export default function NovoCatalogoPage() {
           </div>
         </form>
       </motion.div>
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </DashboardLayout>
   );
 }

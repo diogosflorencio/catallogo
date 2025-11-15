@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const body = await request.json();
-    const { catalogoId, id, nome, slug, descricao, preco, imagem_url, imagens_urls, link_externo, visivel } = body;
+    const { catalogoId, id, nome, slug, descricao, preco, imagem_url, imagens_urls, visivel } = body;
 
     console.log("📝 [API /api/produtos/update] Recebido:", { userId, catalogoId, id, nome, slug });
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       slug,
       descricao: descricao || null,
       preco: preco ? parseFloat(preco) : null,
-      link_externo: link_externo || null,
+      link_externo: null, // Sempre null - funcionalidade removida
       visivel: visivel !== undefined ? Boolean(visivel) : true,
     };
 

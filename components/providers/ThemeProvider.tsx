@@ -32,10 +32,10 @@ export function ThemeProvider({
   useEffect(() => {
     setMounted(true);
     
-    // Aplicar aparência do usuário
-    const userAppearance = userProfile?.appearance || "feminine"; // Padrão: feminino
+    // Aplicar aparência do usuário - usar null se não tiver definido (padrão será feminino no CSS)
+    const userAppearance = userProfile?.appearance || null;
     setAppearanceState(userAppearance);
-    applyAppearance(userAppearance);
+    applyAppearance(userAppearance || "feminine"); // Aplicar feminino como padrão se null
     
     if (isLandingPage) {
       // Landing page: sempre usa preferência do sistema

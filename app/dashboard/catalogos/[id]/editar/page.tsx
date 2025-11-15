@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Loading } from "@/components/ui/Loading";
 import { motion } from "framer-motion";
+import { Modal } from "@/components/ui/Modal";
 
 export default function EditarCatalogoPage({
   params,
@@ -29,6 +30,7 @@ export default function EditarCatalogoPage({
     descricao: "",
     public: true,
   });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     async function loadParams() {
@@ -114,7 +116,7 @@ export default function EditarCatalogoPage({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) {
-      alert("Você precisa fazer login para editar um catálogo");
+      setErrorModal({ isOpen: true, message: "Você precisa fazer login para editar um catálogo" });
       return;
     }
     if (!catalogoId || !formData.nome.trim() || !formData.slug.trim()) {
@@ -144,11 +146,11 @@ export default function EditarCatalogoPage({
       } else {
         const errorData = await response.json();
         console.error("Erro ao atualizar catálogo:", errorData);
-        alert(`Erro ao atualizar catálogo: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({ isOpen: true, message: `Erro ao atualizar catálogo: ${errorData.error || "Erro desconhecido"}` });
       }
     } catch (error: any) {
       console.error("Erro ao atualizar catálogo:", error);
-      alert(`Erro ao atualizar catálogo: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({ isOpen: true, message: `Erro ao atualizar catálogo: ${error.message || "Erro desconhecido"}` });
     } finally {
       setSaving(false);
     }
@@ -245,6 +247,17 @@ export default function EditarCatalogoPage({
           </div>
         </form>
       </motion.div>
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </DashboardLayout>
   );
 }

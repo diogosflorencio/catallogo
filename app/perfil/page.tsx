@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/Button";
 import { signInWithGoogle } from "@/lib/firebase/auth-simple";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Chrome } from "lucide-react";
 import Link from "next/link";
+import { Modal } from "@/components/ui/Modal";
 
 export default function PerfilPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   // Se já estiver logado, o AuthProvider vai redirecionar automaticamente
   // Esta página só deve aparecer para usuários não logados
@@ -23,7 +25,7 @@ export default function PerfilPage() {
       // O AuthProvider vai detectar a mudança automaticamente
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
-      alert(`Erro: ${error.message || error.code || "Erro desconhecido"}`);
+      setErrorModal({ isOpen: true, message: `Erro: ${error.message || error.code || "Erro desconhecido"}` });
     }
   };
 
@@ -128,6 +130,17 @@ export default function PerfilPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </div>
   );
 }

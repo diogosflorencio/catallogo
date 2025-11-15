@@ -8,11 +8,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Link2, Infinity, Sparkles } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [baseUrl, setBaseUrl] = useState("");
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -54,9 +56,9 @@ export default function HomePage() {
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       if (error.message?.includes("Firebase não está configurado")) {
-        alert("Por favor, configure as variáveis de ambiente do Firebase no arquivo .env.local");
+        setErrorModal({ isOpen: true, message: "Por favor, configure as variáveis de ambiente do Firebase no arquivo .env.local" });
       } else {
-        alert("Erro ao fazer login. Tente novamente.");
+        setErrorModal({ isOpen: true, message: "Erro ao fazer login. Tente novamente." });
       }
     }
   };
@@ -254,6 +256,17 @@ export default function HomePage() {
           <p>© 2025 Catallogo. Todos os direitos reservados.</p>
         </div>
       </footer>
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </div>
   );
 }

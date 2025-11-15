@@ -41,7 +41,6 @@ export default function NovoProdutoPage({
     descricao: "",
     preco: "",
     imagensUrls: [] as string[],
-    linkExterno: "",
     visivel: true,
   });
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
@@ -235,7 +234,7 @@ export default function NovoProdutoPage({
           descricao: formData.descricao || null,
           preco: formData.preco || null,
           imagens_urls: formData.imagensUrls, // Array de imagens
-          link_externo: formData.linkExterno || null,
+          link_externo: null,
           visivel: formData.visivel,
         }),
       });
@@ -404,18 +403,6 @@ export default function NovoProdutoPage({
                 setFormData({ ...formData, preco: e.target.value })
               }
               placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium">Link Externo (opcional)</label>
-            <Input
-              type="url"
-              value={formData.linkExterno}
-              onChange={(e) =>
-                setFormData({ ...formData, linkExterno: e.target.value })
-              }
-              placeholder="https://..."
             />
           </div>
 
