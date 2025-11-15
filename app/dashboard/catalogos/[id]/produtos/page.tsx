@@ -10,6 +10,8 @@ import {
 import { UserProfile, Catalogo, Produto } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
+import { Loading } from "@/components/ui/Loading";
+import { Modal } from "@/components/ui/Modal";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -20,13 +22,16 @@ export default function ProdutosPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [catalogoId, setCatalogoId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; produtoId: string | null }>({ isOpen: false, produtoId: null });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     async function loadParams() {
@@ -38,46 +43,64 @@ export default function ProdutosPage({
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user && catalogoId) {
       loadData();
     }
-  }, [user, loading, router, catalogoId]);
+  }, [user, authLoading, router, catalogoId]);
 
   async function loadData() {
     if (!user || !catalogoId) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const [profileResponse, catalogoResponse, produtosResponse] = await Promise.all([
+        fetch("/api/user/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/catalogos/${catalogoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/catalogos/${catalogoId}/produtos`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (response.ok) {
-        const userProfile = await response.json();
+      if (profileResponse.ok) {
+        const userProfile = await profileResponse.json();
         setProfile(userProfile);
       }
+
+      if (catalogoResponse.ok) {
+        const cat = await catalogoResponse.json();
+        setCatalogo(cat);
+      }
+
+      if (produtosResponse.ok) {
+        const prods = await produtosResponse.json();
+        setProdutos(prods);
+      }
     } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
-    }
-    const cat = await getCatalogo(user.uid, catalogoId);
-    if (cat) {
-      setCatalogo(cat);
-      const prods = await getProdutos(catalogoId);
-      setProdutos(prods);
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  async function handleDelete(produtoId: string) {
-    if (!user || !catalogoId || !confirm("Tem certeza que deseja excluir este produto?")) {
-      return;
-    }
-    setDeleting(produtoId);
+  function handleDeleteClick(produtoId: string) {
+    setDeleteModal({ isOpen: true, produtoId });
+  }
+
+  async function handleDeleteConfirm() {
+    if (!user || !catalogoId || !deleteModal.produtoId) return;
+    
+    setDeleting(deleteModal.produtoId);
+    setDeleteModal({ isOpen: false, produtoId: null });
+    
     try {
       const token = await user.getIdToken();
       const response = await fetch("/api/produtos/delete", {
@@ -88,7 +111,7 @@ export default function ProdutosPage({
         },
         body: JSON.stringify({
           catalogoId,
-          id: produtoId,
+          id: deleteModal.produtoId,
         }),
       });
 
@@ -97,27 +120,32 @@ export default function ProdutosPage({
       } else {
         const errorData = await response.json();
         console.error("Erro ao deletar produto:", errorData);
-        alert(`Erro ao deletar produto: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({
+          isOpen: true,
+          message: errorData.error || "Erro desconhecido ao deletar produto",
+        });
       }
     } catch (error: any) {
       console.error("Erro ao excluir:", error);
-      alert(`Erro ao deletar produto: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro desconhecido ao deletar produto",
+      });
     } finally {
       setDeleting(null);
     }
   }
 
-  // Permitir acesso mesmo sem login
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando produtos..." fullScreen />;
   }
 
-  if (!user || !profile || !catalogo) {
-    return null; // Será redirecionado pelo useEffect
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile || !catalogo) {
+    return <Loading message="Carregando dados..." fullScreen />;
   }
 
   return (
@@ -163,15 +191,35 @@ export default function ProdutosPage({
                 transition={{ delay: index * 0.1 }}
                 className="bg-background-alt rounded-xl overflow-hidden hover:shadow-md transition-shadow"
               >
-                {produto.imagem_url && (
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={produto.imagem_url}
-                      alt={produto.nome}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                {(() => {
+                  // Usar imagens_urls se existir, senão usar imagem_url
+                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+                    ? produto.imagens_urls
+                    : (produto.imagem_url ? [produto.imagem_url] : []);
+                  
+                  return imagens.length > 0 ? (
+                    <div className="aspect-square relative overflow-hidden">
+                      {imagens.length === 1 ? (
+                        <img
+                          src={imagens[0]}
+                          alt={produto.nome}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="grid grid-cols-2 h-full">
+                          {imagens.slice(0, 4).map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`${produto.nome} - Imagem ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="p-6">
                   <h3 className="font-display font-semibold text-lg mb-2">
                     {produto.nome}
@@ -198,7 +246,7 @@ export default function ProdutosPage({
                     </Link>
                     <Button
                       variant="outline"
-                      onClick={() => handleDelete(produto.id)}
+                      onClick={() => handleDeleteClick(produto.id)}
                       disabled={deleting === produto.id}
                       className="flex-1"
                     >
@@ -211,6 +259,29 @@ export default function ProdutosPage({
             ))}
           </div>
         )}
+
+        {/* Modal de confirmação de exclusão */}
+        <Modal
+          isOpen={deleteModal.isOpen}
+          onClose={() => setDeleteModal({ isOpen: false, produtoId: null })}
+          onConfirm={handleDeleteConfirm}
+          title="Excluir Produto"
+          message="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          variant="danger"
+        />
+
+        {/* Modal de erro */}
+        <Modal
+          isOpen={errorModal.isOpen}
+          onClose={() => setErrorModal({ isOpen: false, message: "" })}
+          title="Erro"
+          message={errorModal.message}
+          confirmText="OK"
+          showCancel={false}
+          variant="default"
+        />
       </div>
     </DashboardLayout>
   );

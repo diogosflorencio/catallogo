@@ -7,12 +7,14 @@ import {
   getCatalogo,
   getProdutos,
 } from "@/lib/supabase/database";
-import { uploadImage } from "@/lib/storage/upload";
+import { uploadImage, uploadImages } from "@/lib/storage/upload";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Loading } from "@/components/ui/Loading";
+import { Modal } from "@/components/ui/Modal";
 import { checkProductLimit } from "@/lib/firebase/plan-limits";
 import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
@@ -23,24 +25,26 @@ export default function NovoProdutoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [catalogoId, setCatalogoId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [formData, setFormData] = useState({
     nome: "",
     slug: "",
     descricao: "",
     preco: "",
-    imagemUrl: null as string | null,
+    imagensUrls: [] as string[],
     linkExterno: "",
     visivel: true,
   });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     async function loadParams() {
@@ -52,18 +56,19 @@ export default function NovoProdutoPage({
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user && catalogoId) {
       loadData();
     }
-  }, [user, loading, router, catalogoId]);
+  }, [user, authLoading, router, catalogoId]);
 
   async function loadData() {
     if (!user || !catalogoId) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
       const response = await fetch("/api/user/profile", {
@@ -76,49 +81,98 @@ export default function NovoProdutoPage({
         const userProfile = await response.json();
         setProfile(userProfile);
       }
+
+      const catResponse = await fetch(`/api/catalogos/${catalogoId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (catResponse.ok) {
+        const cat = await catResponse.json();
+        setCatalogo(cat);
+        
+        // Buscar produtos para contar
+        const produtosResponse = await fetch(`/api/catalogos/${catalogoId}/produtos`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (produtosResponse.ok) {
+          const produtos = await produtosResponse.json();
+          setProductCount(produtos.length);
+        }
+      }
     } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
-    }
-    const cat = await getCatalogo(user.uid, catalogoId);
-    if (cat) {
-      setCatalogo(cat);
-      const produtos = await getProdutos(catalogoId);
-      setProductCount(produtos.length);
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file || !user) return;
+    if (!user) return;
 
-    // Preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Limitar a 3 imagens no total
+    const remainingSlots = 3 - formData.imagensUrls.length;
+    if (remainingSlots <= 0) {
+      setErrorModal({
+        isOpen: true,
+        message: "Você pode adicionar no máximo 3 imagens por produto.",
+      });
+      return;
+    }
+
+    const filesToUpload = acceptedFiles.slice(0, remainingSlots);
+    
+    // Criar previews
+    const newPreviews: string[] = [];
+    filesToUpload.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === filesToUpload.length) {
+          setPreviews([...previews, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
     // Upload
     setUploading(true);
     try {
       const token = await user.getIdToken();
-      const path = `produtos/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadImage(file, path, token);
-      setFormData({ ...formData, imagemUrl: url });
+      const urls = await uploadImages(filesToUpload, user.uid, token);
+      setFormData({ 
+        ...formData, 
+        imagensUrls: [...formData.imagensUrls, ...urls]
+      });
+      setPreviews([...previews, ...newPreviews]);
     } catch (error: any) {
       console.error("Erro ao fazer upload:", error);
-      alert(error.message || "Erro ao fazer upload da imagem. Verifique se o bucket 'produtos' está configurado no Supabase.");
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao fazer upload das imagens. Verifique se o bucket 'produtos' está configurado no Supabase.",
+      });
     } finally {
       setUploading(false);
     }
-  }, [user, formData]);
+  }, [user, formData, previews]);
+
+  function removeImage(index: number) {
+    const newUrls = formData.imagensUrls.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    setFormData({ ...formData, imagensUrls: newUrls });
+    setPreviews(newPreviews);
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
     },
-    maxFiles: 1,
+    maxFiles: 3,
+    multiple: true,
   });
 
   function generateSlug(text: string): string {
@@ -141,19 +195,27 @@ export default function NovoProdutoPage({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) {
-      alert("Você precisa fazer login para criar um produto");
+      setErrorModal({
+        isOpen: true,
+        message: "Você precisa fazer login para criar um produto",
+      });
       return;
     }
     if (!profile || !catalogoId || !formData.nome.trim() || !formData.slug.trim()) {
+      setErrorModal({
+        isOpen: true,
+        message: "Preencha todos os campos obrigatórios (nome do produto)",
+      });
       return;
     }
 
     // Verificar limite do plano
     const limitCheck = checkProductLimit(profile, productCount, catalogoId);
     if (!limitCheck.allowed) {
-      alert(
-        `Você atingiu o limite de produtos do seu plano (${limitCheck.limit} produtos por catálogo). Faça upgrade para criar mais.`
-      );
+      setErrorModal({
+        isOpen: true,
+        message: `Você atingiu o limite de produtos do seu plano (${limitCheck.limit} produtos por catálogo). Faça upgrade para criar mais.`,
+      });
       return;
     }
 
@@ -172,7 +234,7 @@ export default function NovoProdutoPage({
           slug: formData.slug,
           descricao: formData.descricao || null,
           preco: formData.preco || null,
-          imagem_url: formData.imagemUrl,
+          imagens_urls: formData.imagensUrls, // Array de imagens
           link_externo: formData.linkExterno || null,
           visivel: formData.visivel,
         }),
@@ -185,33 +247,32 @@ export default function NovoProdutoPage({
       } else {
         const errorData = await response.json();
         console.error("❌ [novo-produto] Erro ao criar produto:", errorData);
-        alert(`Erro ao criar produto: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({
+          isOpen: true,
+          message: errorData.error || "Erro desconhecido ao criar produto",
+        });
       }
     } catch (error: any) {
       console.error("❌ [novo-produto] Erro ao criar produto:", error);
-      alert(`Erro ao criar produto: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro desconhecido ao criar produto",
+      });
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando catálogo..." fullScreen />;
   }
 
-  if (!user || !profile || !catalogo) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-foreground/70 mb-4">Você precisa fazer login para criar um produto</p>
-          <a href="/" className="text-primary hover:underline">Voltar para home</a>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile || !catalogo) {
+    return <Loading message="Carregando dados..." fullScreen />;
   }
 
   return (
@@ -231,51 +292,68 @@ export default function NovoProdutoPage({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Upload de Imagem */}
+          {/* Upload de Imagens (até 3) */}
           <div>
-            <label className="block mb-2 font-medium">Imagem do Produto</label>
-            {preview || formData.imagemUrl ? (
-              <div className="relative">
-                <img
-                  src={preview || formData.imagemUrl || ""}
-                  alt="Preview"
-                  className="w-full max-w-md h-64 object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreview(null);
-                    setFormData({ ...formData, imagemUrl: null });
-                  }}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <label className="block mb-2 font-medium">
+              Imagens do Produto {formData.imagensUrls.length > 0 && `(${formData.imagensUrls.length}/3)`}
+            </label>
+            
+            {/* Grid de imagens existentes */}
+            {previews.length > 0 && (
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {previews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border border-blush/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+
+            {/* Área de upload */}
+            {formData.imagensUrls.length < 3 && (
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                   isDragActive
                     ? "border-primary bg-primary/10"
                     : "border-blush/30 hover:border-primary"
                 }`}
               >
                 <input {...getInputProps()} />
-                <Upload className="w-12 h-12 mx-auto mb-4 text-foreground/40" />
+                <Upload className="w-10 h-10 mx-auto mb-3 text-foreground/40" />
                 {uploading ? (
                   <p className="text-foreground/60">Fazendo upload...</p>
                 ) : (
                   <>
-                    <p className="text-foreground/70 mb-2">
-                      Arraste uma imagem aqui ou clique para selecionar
+                    <p className="text-foreground/70 mb-1 text-sm">
+                      {formData.imagensUrls.length === 0 
+                        ? "Arraste imagens aqui ou clique para selecionar"
+                        : `Adicionar mais imagens (${3 - formData.imagensUrls.length} restantes)`
+                      }
                     </p>
-                    <p className="text-sm text-foreground/50">
-                      PNG, JPG, WEBP até 10MB
+                    <p className="text-xs text-foreground/50">
+                      PNG, JPG, WEBP até 10MB cada • Máximo 3 imagens
                     </p>
                   </>
                 )}
               </div>
+            )}
+            
+            {formData.imagensUrls.length >= 3 && (
+              <p className="text-sm text-foreground/60 mt-2">
+                ✓ Máximo de 3 imagens atingido. Remova uma imagem para adicionar outra.
+              </p>
             )}
           </div>
 
@@ -367,6 +445,17 @@ export default function NovoProdutoPage({
             </Button>
           </div>
         </form>
+
+        {/* Modal de erro */}
+        <Modal
+          isOpen={errorModal.isOpen}
+          onClose={() => setErrorModal({ isOpen: false, message: "" })}
+          title="Erro"
+          message={errorModal.message}
+          confirmText="OK"
+          showCancel={false}
+          variant="default"
+        />
       </motion.div>
     </DashboardLayout>
   );

@@ -3,16 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import {
-  getCatalogo,
-  getProduto,
-} from "@/lib/supabase/database";
-import { uploadImage, deleteImage } from "@/lib/storage/upload";
+import { uploadImage, uploadImages, deleteImage } from "@/lib/storage/upload";
 import { UserProfile, Catalogo, Produto } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Loading } from "@/components/ui/Loading";
+import { Modal } from "@/components/ui/Modal";
 import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
 import { Upload, X } from "lucide-react";
@@ -22,25 +20,27 @@ export default function EditarProdutoPage({
 }: {
   params: Promise<{ id: string; produtoId: string }>;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [produto, setProduto] = useState<Produto | null>(null);
   const [catalogoId, setCatalogoId] = useState<string>("");
   const [produtoId, setProdutoId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     nome: "",
     slug: "",
     descricao: "",
     preco: "",
-    imagemUrl: null as string | null,
+    imagensUrls: [] as string[],
     linkExterno: "",
     visivel: true,
   });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
 
   useEffect(() => {
     async function loadParams() {
@@ -53,95 +53,146 @@ export default function EditarProdutoPage({
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user && catalogoId && produtoId) {
       loadData();
     }
-  }, [user, loading, router, catalogoId, produtoId]);
+  }, [user, authLoading, router, catalogoId, produtoId]);
 
   async function loadData() {
     if (!user || !catalogoId || !produtoId) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      
+      // Buscar perfil, catálogo e produto em paralelo
+      const [profileResponse, catalogoResponse, produtoResponse] = await Promise.all([
+        fetch("/api/user/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/catalogos/${catalogoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/catalogos/${catalogoId}/produtos/${produtoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (response.ok) {
-        const userProfile = await response.json();
+      if (profileResponse.ok) {
+        const userProfile = await profileResponse.json();
         setProfile(userProfile);
       }
+
+      if (catalogoResponse.ok) {
+        const cat = await catalogoResponse.json();
+        setCatalogo(cat);
+      }
+
+      if (produtoResponse.ok) {
+        const prod = await produtoResponse.json();
+        setProduto(prod);
+        
+        // Processar imagens: usar imagens_urls se existir, senão usar imagem_url
+        const imagensUrls = (prod.imagens_urls && Array.isArray(prod.imagens_urls) && prod.imagens_urls.length > 0)
+          ? prod.imagens_urls
+          : (prod.imagem_url ? [prod.imagem_url] : []);
+        
+        setFormData({
+          nome: prod.nome,
+          slug: prod.slug,
+          descricao: prod.descricao || "",
+          preco: prod.preco?.toString() || "",
+          imagensUrls: imagensUrls,
+          linkExterno: prod.link_externo || "",
+          visivel: prod.visivel,
+        });
+        setPreviews(imagensUrls);
+      } else if (produtoResponse.status === 404) {
+        router.push(`/dashboard/catalogos/${catalogoId}/produtos`);
+      }
     } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
-    }
-    const cat = await getCatalogo(user.uid, catalogoId);
-    if (cat) {
-      setCatalogo(cat);
-    }
-    const prod = await getProduto(catalogoId, produtoId);
-    if (prod) {
-      setProduto(prod);
-      setFormData({
-        nome: prod.nome,
-        slug: prod.slug,
-        descricao: prod.descricao || "",
-        preco: prod.preco?.toString() || "",
-        imagemUrl: prod.imagem_url || null,
-        linkExterno: prod.link_externo || "",
-        visivel: prod.visivel,
-      });
-      setPreview(prod.imagem_url || null);
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file || !user) return;
+    if (!user) return;
 
-    // Preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Limitar a 3 imagens no total
+    const remainingSlots = 3 - formData.imagensUrls.length;
+    if (remainingSlots <= 0) {
+      setErrorModal({
+        isOpen: true,
+        message: "Você pode adicionar no máximo 3 imagens por produto.",
+      });
+      return;
+    }
 
-      // Upload
-      setUploading(true);
-      try {
-        const token = await user.getIdToken();
-        
-        // Deletar imagem antiga se existir
-        if (formData.imagemUrl) {
-          try {
-            await deleteImage(formData.imagemUrl);
-          } catch (error) {
-            console.error("Erro ao deletar imagem antiga:", error);
-          }
+    const filesToUpload = acceptedFiles.slice(0, remainingSlots);
+    
+    // Criar previews
+    const newPreviews: string[] = [];
+    filesToUpload.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === filesToUpload.length) {
+          setPreviews([...previews, ...newPreviews]);
         }
+      };
+      reader.readAsDataURL(file);
+    });
 
-        const path = `produtos/${user.uid}/${Date.now()}_${file.name}`;
-        const url = await uploadImage(file, path, token);
-        setFormData({ ...formData, imagemUrl: url });
-      } catch (error: any) {
-        console.error("Erro ao fazer upload:", error);
-        alert(error.message || "Erro ao fazer upload da imagem. Verifique se o bucket 'produtos' está configurado no Supabase.");
-      } finally {
-        setUploading(false);
-      }
-  }, [user, formData]);
+    // Upload
+    setUploading(true);
+    try {
+      const token = await user.getIdToken();
+      const urls = await uploadImages(filesToUpload, user.uid, token);
+      setFormData({ 
+        ...formData, 
+        imagensUrls: [...formData.imagensUrls, ...urls]
+      });
+      setPreviews([...previews, ...newPreviews]);
+    } catch (error: any) {
+      console.error("Erro ao fazer upload:", error);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao fazer upload das imagens. Verifique se o bucket 'produtos' está configurado no Supabase.",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }, [user, formData, previews]);
+
+  function removeImage(index: number) {
+    const imageToRemove = formData.imagensUrls[index];
+    const newUrls = formData.imagensUrls.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    
+    // Deletar imagem do storage
+    if (imageToRemove) {
+      deleteImage(imageToRemove).catch((error) => {
+        console.error("Erro ao deletar imagem:", error);
+      });
+    }
+    
+    setFormData({ ...formData, imagensUrls: newUrls });
+    setPreviews(newPreviews);
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
     },
-    maxFiles: 1,
+    maxFiles: 3,
+    multiple: true,
   });
 
   function generateSlug(text: string): string {
@@ -164,10 +215,17 @@ export default function EditarProdutoPage({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) {
-      alert("Você precisa fazer login para editar um produto");
+      setErrorModal({
+        isOpen: true,
+        message: "Você precisa fazer login para editar um produto",
+      });
       return;
     }
     if (!catalogoId || !produtoId || !formData.nome.trim() || !formData.slug.trim()) {
+      setErrorModal({
+        isOpen: true,
+        message: "Preencha todos os campos obrigatórios (nome do produto)",
+      });
       return;
     }
 
@@ -187,7 +245,7 @@ export default function EditarProdutoPage({
           slug: formData.slug,
           descricao: formData.descricao || null,
           preco: formData.preco || null,
-          imagem_url: formData.imagemUrl,
+          imagens_urls: formData.imagensUrls, // Array de imagens
           link_externo: formData.linkExterno || null,
           visivel: formData.visivel,
         }),
@@ -198,33 +256,32 @@ export default function EditarProdutoPage({
       } else {
         const errorData = await response.json();
         console.error("Erro ao atualizar produto:", errorData);
-        alert(`Erro ao atualizar produto: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({
+          isOpen: true,
+          message: errorData.error || "Erro desconhecido ao atualizar produto",
+        });
       }
     } catch (error: any) {
       console.error("Erro ao atualizar produto:", error);
-      alert(`Erro ao atualizar produto: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro desconhecido ao atualizar produto",
+      });
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando produto..." fullScreen />;
   }
 
-  if (!user || !profile || !catalogo || !produto) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-foreground/70 mb-4">Você precisa fazer login para editar um produto</p>
-          <a href="/" className="text-primary hover:underline">Voltar para home</a>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile || !catalogo || !produto) {
+    return <Loading message="Carregando dados do produto..." fullScreen />;
   }
 
   return (
@@ -239,51 +296,68 @@ export default function EditarProdutoPage({
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Upload de Imagem */}
+          {/* Upload de Imagens (até 3) */}
           <div>
-            <label className="block mb-2 font-medium">Imagem do Produto</label>
-            {preview || formData.imagemUrl ? (
-              <div className="relative">
-                <img
-                  src={preview || formData.imagemUrl || ""}
-                  alt="Preview"
-                  className="w-full max-w-md h-64 object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreview(null);
-                    setFormData({ ...formData, imagemUrl: null });
-                  }}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <label className="block mb-2 font-medium">
+              Imagens do Produto {formData.imagensUrls.length > 0 && `(${formData.imagensUrls.length}/3)`}
+            </label>
+            
+            {/* Grid de imagens existentes */}
+            {previews.length > 0 && (
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {previews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border border-blush/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+
+            {/* Área de upload */}
+            {formData.imagensUrls.length < 3 && (
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                   isDragActive
                     ? "border-primary bg-primary/10"
                     : "border-blush/30 hover:border-primary"
                 }`}
               >
                 <input {...getInputProps()} />
-                <Upload className="w-12 h-12 mx-auto mb-4 text-foreground/40" />
+                <Upload className="w-10 h-10 mx-auto mb-3 text-foreground/40" />
                 {uploading ? (
                   <p className="text-foreground/60">Fazendo upload...</p>
                 ) : (
                   <>
-                    <p className="text-foreground/70 mb-2">
-                      Arraste uma imagem aqui ou clique para selecionar
+                    <p className="text-foreground/70 mb-1 text-sm">
+                      {formData.imagensUrls.length === 0 
+                        ? "Arraste imagens aqui ou clique para selecionar"
+                        : `Adicionar mais imagens (${3 - formData.imagensUrls.length} restantes)`
+                      }
                     </p>
-                    <p className="text-sm text-foreground/50">
-                      PNG, JPG, WEBP até 10MB
+                    <p className="text-xs text-foreground/50">
+                      PNG, JPG, WEBP até 10MB cada • Máximo 3 imagens
                     </p>
                   </>
                 )}
               </div>
+            )}
+            
+            {formData.imagensUrls.length >= 3 && (
+              <p className="text-sm text-foreground/60 mt-2">
+                ✓ Máximo de 3 imagens atingido. Remova uma imagem para adicionar outra.
+              </p>
             )}
           </div>
 
@@ -375,6 +449,17 @@ export default function EditarProdutoPage({
             </Button>
           </div>
         </form>
+
+        {/* Modal de erro */}
+        <Modal
+          isOpen={errorModal.isOpen}
+          onClose={() => setErrorModal({ isOpen: false, message: "" })}
+          title="Erro"
+          message={errorModal.message}
+          confirmText="OK"
+          showCancel={false}
+          variant="default"
+        />
       </motion.div>
     </DashboardLayout>
   );

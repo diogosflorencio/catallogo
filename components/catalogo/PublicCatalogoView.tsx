@@ -107,16 +107,40 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
                 className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 onClick={() => handleProductClick(produto)}
               >
-                {produto.imagem_url && (
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={produto.imagem_url}
-                      alt={produto.nome}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  </div>
-                )}
+                {(() => {
+                  // Usar imagens_urls se existir, senão usar imagem_url
+                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+                    ? produto.imagens_urls
+                    : (produto.imagem_url ? [produto.imagem_url] : []);
+                  
+                  return imagens.length > 0 ? (
+                    <div className="aspect-square relative overflow-hidden">
+                      {imagens.length === 1 ? (
+                        <>
+                          <img
+                            src={imagens[0]}
+                            alt={produto.nome}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        </>
+                      ) : (
+                        <div className="grid grid-cols-2 h-full">
+                          {imagens.slice(0, 4).map((img, idx) => (
+                            <div key={idx} className="relative overflow-hidden">
+                              <img
+                                src={img}
+                                alt={`${produto.nome} - Imagem ${idx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="p-4">
                   <h3 className="font-display font-semibold mb-1 line-clamp-1">
                     {produto.nome}

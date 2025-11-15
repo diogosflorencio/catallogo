@@ -34,7 +34,8 @@ export interface Produto {
   nome: string;
   descricao: string | null;
   preco: number | null;
-  imagem_url: string | null;
+  imagem_url: string | null; // Mantido para compatibilidade
+  imagens_urls: string[]; // Array de URLs (máximo 3 imagens)
   link_externo: string | null;
   visivel: boolean;
   created_at: string;
@@ -539,9 +540,21 @@ export async function createProduto(
 
   console.log("📦 [createProduto] Criando produto:", { catalogoId, data });
 
-  const insertData = {
+  // Processar imagens: garantir que imagens_urls seja um array válido
+  const imagensUrls = data.imagens_urls && Array.isArray(data.imagens_urls) 
+    ? data.imagens_urls.slice(0, 3) // Limitar a 3 imagens
+    : (data.imagem_url ? [data.imagem_url] : []); // Fallback para compatibilidade
+
+  const insertData: any = {
     catalogo_id: catalogoId,
-    ...data,
+    nome: data.nome,
+    slug: data.slug,
+    descricao: data.descricao || null,
+    preco: data.preco || null,
+    imagem_url: imagensUrls[0] || null, // Manter primeira imagem para compatibilidade
+    imagens_urls: imagensUrls, // Array de imagens
+    link_externo: data.link_externo || null,
+    visivel: data.visivel !== undefined ? Boolean(data.visivel) : true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -590,10 +603,23 @@ export async function updateProduto(
 
   console.log("📝 [updateProduto] Atualizando produto:", { catalogoId, produtoId, data });
 
-  const updateData = {
+  // Processar imagens se fornecidas
+  const updateData: any = {
     ...data,
     updated_at: new Date().toISOString(),
   };
+
+  // Se imagens_urls foi fornecido, processar
+  if (data.imagens_urls !== undefined) {
+    const imagensUrls = Array.isArray(data.imagens_urls) 
+      ? data.imagens_urls.slice(0, 3) // Limitar a 3 imagens
+      : [];
+    updateData.imagens_urls = imagensUrls;
+    updateData.imagem_url = imagensUrls[0] || null; // Manter primeira imagem para compatibilidade
+  } else if (data.imagem_url !== undefined) {
+    // Se apenas imagem_url foi fornecido, converter para array
+    updateData.imagens_urls = data.imagem_url ? [data.imagem_url] : [];
+  }
 
   console.log("📝 [updateProduto] Dados que serão atualizados:", updateData);
 

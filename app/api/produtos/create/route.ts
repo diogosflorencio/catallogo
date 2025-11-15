@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const body = await request.json();
-    const { catalogoId, nome, slug, descricao, preco, imagem_url, link_externo, visivel } = body;
+    const { catalogoId, nome, slug, descricao, preco, imagem_url, imagens_urls, link_externo, visivel } = body;
 
     console.log("📝 [API /api/produtos/create] Recebido:", { userId, catalogoId, nome, slug });
 
@@ -29,12 +29,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Catálogo não encontrado" }, { status: 404 });
     }
 
+    // Processar imagens: usar imagens_urls se fornecido, senão usar imagem_url
+    const imagensUrls = imagens_urls && Array.isArray(imagens_urls)
+      ? imagens_urls.slice(0, 3) // Limitar a 3 imagens
+      : (imagem_url ? [imagem_url] : []);
+
     const produtoId = await createProduto(catalogoId, {
       nome,
       slug,
       descricao: descricao || null,
       preco: preco ? parseFloat(preco) : null,
-      imagem_url: imagem_url || null,
+      imagem_url: imagensUrls[0] || null, // Primeira imagem para compatibilidade
+      imagens_urls: imagensUrls, // Array de imagens
       link_externo: link_externo || null,
       visivel: visivel !== undefined ? Boolean(visivel) : true,
     });

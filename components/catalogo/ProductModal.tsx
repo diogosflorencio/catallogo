@@ -128,26 +128,49 @@ export function ProductModal({
 
               {/* Content */}
               <div className="p-4 space-y-4">
-                {/* Image */}
-                {produto.imagem_url && (
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt group">
-                    {!imageLoaded && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-pulse bg-blush/20 w-full h-full" />
-                      </div>
-                    )}
-                    <img
-                      src={produto.imagem_url}
-                      alt={produto.nome}
-                      className={`w-full h-full object-cover transition-all duration-300 ${
-                        imageLoaded ? "opacity-100" : "opacity-0"
-                      } group-hover:scale-105`}
-                      onLoad={() => setImageLoaded(true)}
-                    />
-                    {/* Overlay gradient para melhorar legibilidade */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                )}
+                {/* Images */}
+                {(() => {
+                  // Usar imagens_urls se existir, senão usar imagem_url
+                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+                    ? produto.imagens_urls
+                    : (produto.imagem_url ? [produto.imagem_url] : []);
+                  
+                  return imagens.length > 0 ? (
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt group">
+                      {!imageLoaded && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="animate-pulse bg-blush/20 w-full h-full" />
+                        </div>
+                      )}
+                      {imagens.length === 1 ? (
+                        <img
+                          src={imagens[0]}
+                          alt={produto.nome}
+                          className={`w-full h-full object-cover transition-all duration-300 ${
+                            imageLoaded ? "opacity-100" : "opacity-0"
+                          } group-hover:scale-105`}
+                          onLoad={() => setImageLoaded(true)}
+                        />
+                      ) : (
+                        <div className="grid grid-cols-2 h-full">
+                          {imagens.slice(0, 4).map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`${produto.nome} - Imagem ${idx + 1}`}
+                              className={`w-full h-full object-cover transition-all duration-300 ${
+                                imageLoaded ? "opacity-100" : "opacity-0"
+                              } group-hover:scale-105`}
+                              onLoad={() => idx === 0 && setImageLoaded(true)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {/* Overlay gradient para melhorar legibilidade */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Price - destacado se não tiver descrição */}
                 {produto.preco && !produto.descricao && (
