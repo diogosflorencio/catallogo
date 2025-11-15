@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageCircle, ExternalLink, Share2 } from "lucide-react";
+import { X, MessageCircle, ExternalLink, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Produto, UserProfile } from "@/lib/supabase/database";
 import { generateWhatsAppLink, replaceTemplateVariables } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
@@ -23,7 +23,31 @@ export function ProductModal({
   isOpen,
   onClose,
 }: ProductModalProps) {
+  // Usar imagens_urls se existir, senão usar imagem_url
+  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+    ? produto.imagens_urls
+    : (produto.imagem_url ? [produto.imagem_url] : []);
+  
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Resetar índice quando o modal abrir ou produto mudar
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentImageIndex(0);
+      setImageLoaded(false);
+    }
+  }, [isOpen, produto.id]);
+
+  function nextImage() {
+    setCurrentImageIndex((prev) => (prev + 1) % imagens.length);
+    setImageLoaded(false);
+  }
+
+  function prevImage() {
+    setCurrentImageIndex((prev) => (prev - 1 + imagens.length) % imagens.length);
+    setImageLoaded(false);
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -128,49 +152,75 @@ export function ProductModal({
 
               {/* Content */}
               <div className="p-4 space-y-4">
-                {/* Images */}
-                {(() => {
-                  // Usar imagens_urls se existir, senão usar imagem_url
-                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
-                    ? produto.imagens_urls
-                    : (produto.imagem_url ? [produto.imagem_url] : []);
-                  
-                  return imagens.length > 0 ? (
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt group">
-                      {!imageLoaded && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="animate-pulse bg-blush/20 w-full h-full" />
-                        </div>
-                      )}
-                      {imagens.length === 1 ? (
-                        <img
-                          src={imagens[0]}
-                          alt={produto.nome}
-                          className={`w-full h-full object-cover transition-all duration-300 ${
-                            imageLoaded ? "opacity-100" : "opacity-0"
-                          } group-hover:scale-105`}
-                          onLoad={() => setImageLoaded(true)}
-                        />
-                      ) : (
-                        <div className="grid grid-cols-2 h-full">
-                          {imagens.slice(0, 4).map((img, idx) => (
-                            <img
+                {/* Image Carousel */}
+                {imagens.length > 0 && (
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt">
+                    {!imageLoaded && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <div className="animate-pulse bg-blush/20 w-full h-full" />
+                      </div>
+                    )}
+                    
+                    {/* Current Image */}
+                    <AnimatePresence mode="wait">
+                      <motion.img
+                        key={currentImageIndex}
+                        src={imagens[currentImageIndex]}
+                        alt={`${produto.nome} - Imagem ${currentImageIndex + 1}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: imageLoaded ? 1 : 0, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full h-full object-cover"
+                        onLoad={() => setImageLoaded(true)}
+                      />
+                    </AnimatePresence>
+
+                    {/* Navigation Arrows */}
+                    {imagens.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors z-20"
+                          aria-label="Imagem anterior"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={nextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors z-20"
+                          aria-label="Próxima imagem"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+
+                        {/* Image Indicators */}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                          {imagens.map((_, idx) => (
+                            <button
                               key={idx}
-                              src={img}
-                              alt={`${produto.nome} - Imagem ${idx + 1}`}
-                              className={`w-full h-full object-cover transition-all duration-300 ${
-                                imageLoaded ? "opacity-100" : "opacity-0"
-                              } group-hover:scale-105`}
-                              onLoad={() => idx === 0 && setImageLoaded(true)}
+                              onClick={() => {
+                                setCurrentImageIndex(idx);
+                                setImageLoaded(false);
+                              }}
+                              className={`h-2 rounded-full transition-all ${
+                                idx === currentImageIndex
+                                  ? "bg-white w-6"
+                                  : "bg-white/50 w-2 hover:bg-white/75"
+                              }`}
+                              aria-label={`Ir para imagem ${idx + 1}`}
                             />
                           ))}
                         </div>
-                      )}
-                      {/* Overlay gradient para melhorar legibilidade */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  ) : null;
-                })()}
+
+                        {/* Image Counter */}
+                        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full z-20">
+                          {currentImageIndex + 1} / {imagens.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Price - destacado se não tiver descrição */}
                 {produto.preco && !produto.descricao && (

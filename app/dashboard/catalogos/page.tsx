@@ -28,6 +28,7 @@ export default function CatalogosPage() {
     isOpen: false,
     message: "",
   });
+  const [produtosCount, setProdutosCount] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Exigir login
@@ -66,6 +67,25 @@ export default function CatalogosPage() {
         if (catalogosResponse.ok) {
           const cats = await catalogosResponse.json();
           setCatalogos(cats);
+          
+          // Buscar contagem de produtos
+          if (cats.length > 0) {
+            const produtosCountResponse = await fetch("/api/catalogos/produtos-count", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                catalogoIds: cats.map((c: Catalogo) => c.id),
+              }),
+            });
+            
+            if (produtosCountResponse.ok) {
+              const counts = await produtosCountResponse.json();
+              setProdutosCount(counts);
+            }
+          }
         } else {
           console.error("Erro ao buscar catálogos:", await catalogosResponse.text());
         }
@@ -180,10 +200,14 @@ export default function CatalogosPage() {
                   {catalogo.nome}
                 </h3>
                 {catalogo.descricao && (
-                  <p className="text-sm text-foreground/60 mb-4 line-clamp-2">
+                  <p className="text-sm text-foreground/60 mb-2 line-clamp-2">
                     {catalogo.descricao}
                   </p>
                 )}
+                <p className="text-xs text-foreground/50 mb-4">
+                  <Package className="w-3 h-3 inline mr-1" />
+                  {produtosCount[catalogo.id] || 0} produto{produtosCount[catalogo.id] !== 1 ? 's' : ''}
+                </p>
                 <div className="flex items-center justify-between mb-4">
                   <span
                     className={`text-xs px-2 py-1 rounded font-medium ${

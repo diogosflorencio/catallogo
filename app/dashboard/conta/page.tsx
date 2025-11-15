@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { checkUsernameExists } from "@/lib/supabase/database";
@@ -11,10 +11,14 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Loading } from "@/components/ui/Loading";
 import { Modal } from "@/components/ui/Modal";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PLANS, PlanType } from "@/lib/stripe/config";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
+import { uploadImage } from "@/lib/storage/upload";
+import { useDropzone } from "react-dropzone";
+import { Upload, X } from "lucide-react";
 import Link from "next/link";
 
 function ContaPageContent() {
@@ -35,6 +39,9 @@ function ContaPageContent() {
   const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Exigir login
@@ -78,6 +85,8 @@ function ContaPageContent() {
       if (response.ok) {
         const userProfile = await response.json();
         setProfile(userProfile);
+        setCustomPhotoUrl(userProfile.custom_photo_url || null);
+        setPhotoPreview(userProfile.custom_photo_url || null);
         setFormData({
           nomeLoja: userProfile.nome_loja || "",
           username: userProfile.username || "",
@@ -92,6 +101,48 @@ function ContaPageContent() {
     } finally {
       setLoading(false);
     }
+  }
+
+  const onDropPhoto = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file || !user) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload
+    setUploadingPhoto(true);
+    try {
+      const token = await user.getIdToken();
+      const path = `perfis/${user.uid}/${Date.now()}_${file.name}`;
+      const url = await uploadImage(file, path, token);
+      setCustomPhotoUrl(url);
+    } catch (error: any) {
+      console.error("Erro ao fazer upload da foto:", error);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao fazer upload da foto. Verifique se o bucket está configurado.",
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }, [user]);
+
+  const { getRootProps: getRootPropsPhoto, getInputProps: getInputPropsPhoto, isDragActive: isDragActivePhoto } = useDropzone({
+    onDrop: onDropPhoto,
+    accept: {
+      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+    },
+    maxFiles: 1,
+  });
+
+  function removePhoto() {
+    setPhotoPreview(null);
+    setCustomPhotoUrl(null);
   }
 
   async function handleSave() {
@@ -148,7 +199,7 @@ function ContaPageContent() {
         }
       }
 
-      // Atualizar outros campos
+      // Atualizar outros campos (incluindo foto customizada)
       const updateResponse = await fetch("/api/user/update", {
         method: "POST",
         headers: {
@@ -160,6 +211,7 @@ function ContaPageContent() {
             nome_loja: formData.nomeLoja,
             whatsapp_number: formData.whatsappNumber,
             mensagem_template: formData.mensagemTemplate,
+            custom_photo_url: customPhotoUrl,
           },
         }),
       });
@@ -371,14 +423,20 @@ function ContaPageContent() {
             <div>
               <label className="block mb-2 font-medium">Tema do Site</label>
               <p className="text-sm text-foreground/60 mb-4">
-                O tema atual é otimizado para uma experiência suave e feminina. 
-                Personalizações de tema estarão disponíveis em breve.
+                Escolha entre o tema claro ou o tema escuro/feminino. O tema escuro usa preto, cinza, roxo e rosa para uma experiência elegante.
               </p>
               <div className="flex gap-3">
                 <div className="flex-1 p-4 rounded-lg border-2 border-primary bg-primary/10">
-                  <p className="font-semibold mb-1">Tema Padrão</p>
+                  <p className="font-semibold mb-1">Tema Claro</p>
                   <p className="text-xs text-foreground/60">Suave e feminino</p>
                 </div>
+                <div className="flex-1 p-4 rounded-lg border-2 border-lavender bg-lavender/10">
+                  <p className="font-semibold mb-1">Tema Escuro/Feminino</p>
+                  <p className="text-xs text-foreground/60">Preto, cinza, roxo e rosa</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <ThemeToggle />
               </div>
             </div>
           </div>

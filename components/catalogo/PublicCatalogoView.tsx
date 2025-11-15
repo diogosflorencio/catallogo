@@ -67,9 +67,9 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
       <header className="border-b border-blush/20 bg-background-alt/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            {user.photo_url && (
+            {(user.custom_photo_url || user.photo_url) && (
               <img
-                src={user.photo_url}
+                src={user.custom_photo_url || user.photo_url || ""}
                 alt={user.nome_loja || ""}
                 className="w-12 h-12 rounded-full object-cover"
               />
@@ -97,70 +97,51 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
             <p className="text-foreground/60">Nenhum produto disponível</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {produtos.map((produto, index) => (
-              <motion.div
-                key={produto.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                onClick={() => handleProductClick(produto)}
-              >
-                {(() => {
-                  // Usar imagens_urls se existir, senão usar imagem_url
-                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
-                    ? produto.imagens_urls
-                    : (produto.imagem_url ? [produto.imagem_url] : []);
-                  
-                  return imagens.length > 0 ? (
-                    <div className="aspect-square relative overflow-hidden">
-                      {imagens.length === 1 ? (
-                        <>
-                          <img
-                            src={imagens[0]}
-                            alt={produto.nome}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                        </>
-                      ) : (
-                        <div className="grid grid-cols-2 h-full">
-                          {imagens.slice(0, 4).map((img, idx) => (
-                            <div key={idx} className="relative overflow-hidden">
-                              <img
-                                src={img}
-                                alt={`${produto.nome} - Imagem ${idx + 1}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                            </div>
-                          ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {produtos.map((produto, index) => {
+              // Usar imagens_urls se existir, senão usar imagem_url - mostrar apenas primeira imagem
+              const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+                ? produto.imagens_urls
+                : (produto.imagem_url ? [produto.imagem_url] : []);
+              const primeiraImagem = imagens[0] || null;
+              
+              return (
+                <motion.div
+                  key={produto.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-background-alt rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col h-full"
+                  onClick={() => handleProductClick(produto)}
+                >
+                  {primeiraImagem && (
+                    <div className="w-full h-40 relative overflow-hidden bg-background-alt">
+                      <img
+                        src={primeiraImagem}
+                        alt={produto.nome}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                      {imagens.length > 1 && (
+                        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                          +{imagens.length - 1}
                         </div>
                       )}
                     </div>
-                  ) : null;
-                })()}
-                <div className="p-4">
-                  <h3 className="font-display font-semibold mb-1 line-clamp-1">
-                    {produto.nome}
-                  </h3>
-                  {produto.descricao && (
-                    <p className="text-sm text-foreground/60 mb-2 line-clamp-2">
-                      {produto.descricao}
-                    </p>
                   )}
-                  {produto.preco && (
-                    <p className="font-semibold text-primary mb-3">
-                      {formatPrice(Number(produto.preco))}
-                    </p>
-                  )}
-                  <div className="text-xs text-foreground/50">
-                    Clique para ver mais detalhes
+                  <div className="p-3 flex-1 flex flex-col">
+                    <h3 className="font-display font-semibold text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
+                      {produto.nome}
+                    </h3>
+                    {produto.preco && (
+                      <p className="font-semibold text-primary text-sm mt-auto pt-2">
+                        {formatPrice(Number(produto.preco))}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </main>

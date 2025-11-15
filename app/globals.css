@@ -4,7 +4,8 @@
 @tailwind utilities;
 
 :root {
-  --blush: #F6D1D1;
+  /* Tema Light (padrão) */
+  --blush: #E8A4B8; /* Rosa mais escuro para melhor legibilidade */
   --peach: #FFD7B5;
   --lavender: #9F8DAF;
   --background: #FFFFFF;
@@ -17,6 +18,36 @@
   
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Tema Dark/Feminino */
+[data-theme="dark"] {
+  --blush: #E8A4B8; /* Rosa mantido */
+  --peach: #D4A5C7; /* Pêssego mais escuro/roxo */
+  --lavender: #B19CD9; /* Lavanda mais vibrante */
+  --background: #0A0A0F; /* Preto profundo */
+  --background-alt: #1A1A24; /* Cinza escuro */
+  --foreground: #F5F5F5; /* Texto claro */
+  
+  --primary: var(--blush);
+  --secondary: var(--peach);
+  --accent: var(--lavender);
+}
+
+/* Detecção de preferência do sistema */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --blush: #E8A4B8;
+    --peach: #D4A5C7;
+    --lavender: #B19CD9;
+    --background: #0A0A0F;
+    --background-alt: #1A1A24;
+    --foreground: #F5F5F5;
+    
+    --primary: var(--blush);
+    --secondary: var(--peach);
+    --accent: var(--lavender);
+  }
 }
 
 * {

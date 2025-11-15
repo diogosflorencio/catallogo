@@ -6,7 +6,8 @@ export interface UserProfile {
   id: string;
   email: string;
   display_name: string | null;
-  photo_url: string | null;
+  photo_url: string | null; // Foto do Google (mantida para compatibilidade)
+  custom_photo_url: string | null; // Foto customizada do usuário
   username: string | null;
   nome_loja: string | null;
   plano: "free" | "pro" | "premium";

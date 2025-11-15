@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 interface DashboardHomeProps {
   catalogos: Catalogo[];
@@ -12,6 +14,45 @@ interface DashboardHomeProps {
 }
 
 export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
+  const { user } = useAuth();
+  const [produtosCount, setProdutosCount] = useState<Record<string, number>>({});
+  const [baseUrl, setBaseUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function loadProdutosCount() {
+      if (!user || catalogos.length === 0) return;
+      
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch("/api/catalogos/produtos-count", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            catalogoIds: catalogos.map((c) => c.id),
+          }),
+        });
+
+        if (response.ok) {
+          const counts = await response.json();
+          setProdutosCount(counts);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar contagem de produtos:", error);
+      }
+    }
+
+    loadProdutosCount();
+  }, [user, catalogos]);
+
   if (!profile) {
     return (
       <div className="text-center py-12">
@@ -54,10 +95,17 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
           </p>
         </div>
         <div className="bg-background-alt rounded-xl p-6">
-          <p className="text-sm text-foreground/60 mb-1">Seu Link</p>
-          <p className="text-sm font-mono text-primary break-all">
-            catallogo.web.app/{profile.username || 'seu-username'}
-          </p>
+          <p className="text-sm text-foreground/60 mb-2">Seus Links</p>
+          <div className="space-y-1">
+            <p className="text-xs font-mono text-primary break-all">
+              {baseUrl || 'carregando...'}/{profile.username || 'seu-username'}
+            </p>
+            {catalogos.length > 0 && catalogos[0] && (
+              <p className="text-xs font-mono text-primary/70 break-all">
+                {baseUrl || 'carregando...'}/{profile.username || 'seu-username'}/{catalogos[0].slug}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -92,10 +140,13 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                 {catalogo.nome}
               </h4>
               {catalogo.descricao && (
-                <p className="text-sm text-foreground/60 mb-4 line-clamp-2">
+                <p className="text-sm text-foreground/60 mb-2 line-clamp-2">
                   {catalogo.descricao}
                 </p>
               )}
+              <p className="text-xs text-foreground/50 mb-4">
+                {produtosCount[catalogo.id] || 0} produto{produtosCount[catalogo.id] !== 1 ? 's' : ''}
+              </p>
               <div className="flex items-center justify-between">
                 <span
                   className={`text-xs px-2 py-1 rounded font-medium ${
