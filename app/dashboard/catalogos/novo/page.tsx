@@ -170,7 +170,7 @@ export default function NovoCatalogoPage() {
           </div>
 
           <div>
-            <label className="block mb-2 font-medium">Slug (URL)</label>
+            <label className="block mb-2 font-medium">URL do Catálogo</label>
             <Input
               value={formData.slug}
               onChange={(e) =>

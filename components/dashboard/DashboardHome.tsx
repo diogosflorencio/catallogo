@@ -90,18 +90,20 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
 
       {/* Stats Cards e Links */}
       <div className="grid md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-background-alt rounded-xl p-6">
+        <Link href="/dashboard/catalogos" className="bg-background-alt rounded-xl p-6 hover:bg-background-alt/80 transition-colors">
           <p className="text-sm text-foreground/60 mb-1">Total de Catálogos</p>
           <p className="text-3xl font-display font-semibold">
             {catalogos.length}
           </p>
-        </div>
-        <div className="bg-background-alt rounded-xl p-6">
+          <p className="text-xs text-primary mt-2 hover:underline">Ver catálogos →</p>
+        </Link>
+        <Link href="/dashboard/conta" className="bg-background-alt rounded-xl p-6 hover:bg-background-alt/80 transition-colors">
           <p className="text-sm text-foreground/60 mb-1">Plano Atual</p>
           <p className="text-3xl font-display font-semibold capitalize">
             {profile.plano || 'free'}
           </p>
-        </div>
+          <p className="text-xs text-primary mt-2 hover:underline">Gerenciar plano →</p>
+        </Link>
         {profile.username && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -112,20 +114,18 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
             <div className="space-y-2">
               {/* Link do perfil */}
               <div className="p-3 bg-background rounded-lg border border-blush/20">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-foreground mb-1.5">
-                      Você pode compartilhar todos os seus catálogos:
-                    </p>
-                    <a
-                      href={`${baseUrl}/${profile.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-mono text-primary hover:underline break-all block"
-                    >
-                      {baseUrl || 'carregando...'}/{profile.username}
-                    </a>
-                  </div>
+                <p className="text-xs font-semibold text-foreground mb-1.5">
+                  Você pode compartilhar todos os seus catálogos:
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <a
+                    href={`${baseUrl}/${profile.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
+                  >
+                    {baseUrl || 'carregando...'}/{profile.username}
+                  </a>
                   <button
                     onClick={() => copyToClipboard(`${baseUrl}/${profile.username}`)}
                     className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
@@ -142,43 +142,41 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
 
               {/* Links dos catálogos */}
               {catalogos.length > 0 && (
-                <div className="p-3 bg-background rounded-lg border border-blush/20">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground mb-1.5">
-                        Ou catálogos específicos:
-                      </p>
-                    </div>
-                  </div>
-                  <div className={`space-y-1.5 transition-all ${linksExpanded ? '' : 'max-h-[20px] overflow-hidden'}`}>
+                <>
+                  <p className="text-xs font-semibold text-foreground mb-1.5 px-1">
+                    Ou catálogos específicos:
+                  </p>
+                  <div className={`space-y-2 transition-all ${linksExpanded ? '' : 'max-h-[28px] overflow-hidden'}`}>
                     {catalogos.map((catalogo) => (
-                      <div key={catalogo.id} className="flex items-center justify-between gap-2">
-                        <a
-                          href={`${baseUrl}/${profile.username}/${catalogo.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
-                        >
-                          {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
-                        </a>
-                        <button
-                          onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
-                          className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                          title="Copiar link do catálogo"
-                        >
-                          {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4 text-foreground/60" />
-                          )}
-                        </button>
+                      <div key={catalogo.id} className="p-3 bg-background rounded-lg border border-blush/20">
+                        <div className="flex items-center justify-between gap-2">
+                          <a
+                            href={`${baseUrl}/${profile.username}/${catalogo.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
+                          >
+                            {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
+                          </a>
+                          <button
+                            onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
+                            className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
+                            title="Copiar link do catálogo"
+                          >
+                            {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-foreground/60" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                   {catalogos.length > 1 && (
                     <button
                       onClick={() => setLinksExpanded(!linksExpanded)}
-                      className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
                       {linksExpanded ? (
                         <>
@@ -193,7 +191,7 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                       )}
                     </button>
                   )}
-                </div>
+                </>
               )}
             </div>
           </motion.div>

@@ -121,13 +121,17 @@ function ContaPageContent() {
       const token = await user.getIdToken();
       const path = `perfis/${user.uid}/${Date.now()}_${file.name}`;
       const url = await uploadImage(file, path, token);
+      console.log("✅ Foto enviada com sucesso, URL:", url);
       setCustomPhotoUrl(url);
+      setPhotoPreview(url); // Garantir que o preview também use a URL
     } catch (error: any) {
       console.error("Erro ao fazer upload da foto:", error);
       setErrorModal({
         isOpen: true,
         message: error.message || "Erro ao fazer upload da foto. Verifique se o bucket está configurado.",
       });
+      setPhotoPreview(null);
+      setCustomPhotoUrl(null);
     } finally {
       setUploadingPhoto(false);
     }
@@ -201,6 +205,15 @@ function ContaPageContent() {
       }
 
       // Atualizar outros campos (incluindo foto customizada)
+      const updateData = {
+        nome_loja: formData.nomeLoja,
+        whatsapp_number: formData.whatsappNumber,
+        mensagem_template: formData.mensagemTemplate,
+        custom_photo_url: customPhotoUrl || null,
+      };
+      
+      console.log("📝 Salvando perfil com custom_photo_url:", customPhotoUrl);
+      
       const updateResponse = await fetch("/api/user/update", {
         method: "POST",
         headers: {
@@ -208,19 +221,26 @@ function ContaPageContent() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          data: {
-            nome_loja: formData.nomeLoja,
-            whatsapp_number: formData.whatsappNumber,
-            mensagem_template: formData.mensagemTemplate,
-            custom_photo_url: customPhotoUrl || null,
-          },
+          data: updateData,
         }),
       });
 
       if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        console.error("Erro ao atualizar perfil:", errorText);
         throw new Error("Erro ao atualizar perfil");
       }
 
+      const updateResult = await updateResponse.json();
+      console.log("✅ Perfil atualizado:", updateResult);
+      
+      // Atualizar estado imediatamente com a URL retornada
+      if (updateResult.custom_photo_url) {
+        setCustomPhotoUrl(updateResult.custom_photo_url);
+        setPhotoPreview(updateResult.custom_photo_url);
+      }
+
+      // Recarregar dados para garantir que a foto aparece
       await loadData();
       setSuccessModal({
         isOpen: true,

@@ -189,7 +189,7 @@ export default function EditarCatalogoPage({
           </div>
 
           <div>
-            <label className="block mb-2 font-medium">Slug (URL)</label>
+            <label className="block mb-2 font-medium">URL do Catálogo</label>
             <Input
               value={formData.slug}
               onChange={(e) =>

@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { data } = body;
 
-    console.log("📝 [API /api/user/update] Recebido:", { userId, data });
+    console.log("📝 [API /api/user/update] Recebido:", { userId, data, custom_photo_url: data.custom_photo_url });
 
     // Se está atualizando a foto de perfil, deletar a anterior
-    if (data.custom_photo_url) {
+    if (data.custom_photo_url !== undefined) {
       const currentProfile = await getUserProfile(userId);
       if (currentProfile?.custom_photo_url && currentProfile.custom_photo_url !== data.custom_photo_url) {
         try {
@@ -48,9 +48,14 @@ export async function POST(request: NextRequest) {
 
     await updateUserProfile(userId, data);
     
-    console.log("✅ [API /api/user/update] Perfil atualizado com sucesso");
+    // Verificar se foi salvo corretamente
+    const updatedProfile = await getUserProfile(userId);
+    console.log("✅ [API /api/user/update] Perfil atualizado com sucesso. custom_photo_url:", updatedProfile?.custom_photo_url);
     
-    return NextResponse.json({ message: "Perfil atualizado" });
+    return NextResponse.json({ 
+      message: "Perfil atualizado",
+      custom_photo_url: updatedProfile?.custom_photo_url 
+    });
   } catch (error: any) {
     console.error("Erro ao atualizar perfil:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

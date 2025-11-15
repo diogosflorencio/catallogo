@@ -50,36 +50,36 @@ export function ThemeToggle() {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Button
         variant={theme === "light" ? "default" : "outline"}
         onClick={() => handleThemeChange("light")}
         disabled={saving}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 flex-shrink-0"
         aria-label="Tema claro"
       >
         <Sun className="w-4 h-4" />
-        <span>Claro</span>
+        <span className="hidden sm:inline">Claro</span>
       </Button>
       <Button
         variant={theme === "dark" ? "default" : "outline"}
         onClick={() => handleThemeChange("dark")}
         disabled={saving}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 flex-shrink-0"
         aria-label="Tema escuro"
       >
         <Moon className="w-4 h-4" />
-        <span>Escuro</span>
+        <span className="hidden sm:inline">Escuro</span>
       </Button>
       <Button
         variant={theme === "system" ? "default" : "outline"}
         onClick={() => handleThemeChange("system")}
         disabled={saving}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 flex-shrink-0"
         aria-label="Tema do sistema"
       >
         <Monitor className="w-4 h-4" />
-        <span>Sistema</span>
+        <span className="hidden sm:inline">Sistema</span>
       </Button>
     </div>
   );

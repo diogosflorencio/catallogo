@@ -5,13 +5,20 @@ import { Button } from "@/components/ui/Button";
 import { signInWithGoogle } from "@/lib/firebase/auth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Link2, Infinity, Sparkles } from "lucide-react";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [baseUrl, setBaseUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     // Redirecionar para configuração se usuário logado mas sem perfil completo
@@ -124,7 +131,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">URL Personalizada</p>
-                    <p className="text-sm text-foreground/60">catallogo.app/seu-nome</p>
+                    <p className="text-sm text-foreground/60">{baseUrl || 'catallogo.app'}/seu-nome</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -210,7 +217,7 @@ export default function HomePage() {
                   Grátis Para Sempre
                 </h3>
                 <p className="text-sm text-foreground/70">
-                  Plano gratuito com tudo ilimitado, sem tempo de expiração
+                  Plano gratuito ilimitado, sem tempo de expiração
                 </p>
               </div>
             </motion.div>
@@ -234,7 +241,7 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-primary mb-1">100%</p>
-                <p className="text-sm text-foreground/70">Gratuito Para Sempre</p>
+                <p className="text-sm text-foreground/70">Plano Gratuito para sempre</p>
               </div>
             </div>
           </motion.div>
