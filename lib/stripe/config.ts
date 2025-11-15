@@ -8,14 +8,14 @@ export const PLANS = {
   },
   pro: {
     name: "Pro",
-    price: 29.90,
+    price: 19.90,
     catalogos: 1, // 1 catálogo
     produtos: 100, // máximo 100 produtos (mostrado como ilimitado)
     features: ["1 catálogo", "Produtos ilimitados", "URL personalizada", "Suporte instantâneo"],
   },
   premium: {
     name: "Premium",
-    price: 79.90,
+    price: 39.90,
     catalogos: 50, // máximo 50 catálogos (mostrado como ilimitado)
     produtos: 100, // máximo 100 produtos por catálogo (mostrado como ilimitado)
     features: [
