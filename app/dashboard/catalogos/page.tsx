@@ -304,7 +304,7 @@ export default function CatalogosPage() {
         showCancel={false}
         variant="default"
       />
-        </div>
+      </div>
       </DashboardLayout>
     </ThemeProvider>
   );

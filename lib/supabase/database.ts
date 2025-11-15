@@ -439,6 +439,45 @@ export async function deleteCatalogo(userId: string, catalogoId: string): Promis
 
   console.log("🗑️ [deleteCatalogo] Deletando catálogo:", { userId, catalogoId });
 
+  // Buscar todos os produtos do catálogo para deletar imagens
+  const { data: produtos, error: fetchError } = await supabaseAdmin
+    .from("produtos")
+    .select("imagens_urls, imagem_url")
+    .eq("catalogo_id", catalogoId);
+
+  if (fetchError) {
+    console.warn("⚠️ [deleteCatalogo] Erro ao buscar produtos:", fetchError);
+  } else if (produtos) {
+    // Deletar todas as imagens dos produtos
+    for (const produto of produtos) {
+      const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+        ? produto.imagens_urls
+        : (produto.imagem_url ? [produto.imagem_url] : []);
+
+      for (const imagemUrl of imagens) {
+        if (imagemUrl) {
+          try {
+            // Extrair path da URL
+            const urlObj = new URL(imagemUrl);
+            const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/produtos\/(.+)/);
+            if (pathMatch) {
+              const imagePath = pathMatch[1];
+              const { error: deleteError } = await supabaseAdmin.storage
+                .from("produtos")
+                .remove([imagePath]);
+              if (deleteError) {
+                console.warn("⚠️ [deleteCatalogo] Erro ao deletar imagem:", imagePath, deleteError);
+              }
+            }
+          } catch (error) {
+            console.warn("⚠️ [deleteCatalogo] Erro ao processar URL da imagem:", imagemUrl, error);
+          }
+        }
+      }
+    }
+  }
+
+  // Deletar catálogo (produtos serão deletados automaticamente por CASCADE)
   const { error } = await supabaseAdmin
     .from("catalogos")
     .delete()
@@ -656,6 +695,48 @@ export async function deleteProduto(catalogoId: string, produtoId: string): Prom
 
   console.log("🗑️ [deleteProduto] Deletando produto:", { catalogoId, produtoId });
 
+  // Buscar produto para obter URLs das imagens antes de deletar
+  const { data: produto, error: fetchError } = await supabaseAdmin
+    .from("produtos")
+    .select("imagens_urls, imagem_url")
+    .eq("id", produtoId)
+    .eq("catalogo_id", catalogoId)
+    .single();
+
+  if (fetchError) {
+    console.error("❌ [deleteProduto] Erro ao buscar produto:", fetchError);
+    throw new Error(`Erro ao buscar produto: ${fetchError.message}`);
+  }
+
+  // Deletar imagens do storage
+  if (produto) {
+    const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+      ? produto.imagens_urls
+      : (produto.imagem_url ? [produto.imagem_url] : []);
+
+    for (const imagemUrl of imagens) {
+      if (imagemUrl) {
+        try {
+          // Extrair path da URL
+          const urlObj = new URL(imagemUrl);
+          const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/produtos\/(.+)/);
+          if (pathMatch) {
+            const imagePath = pathMatch[1];
+            const { error: deleteError } = await supabaseAdmin.storage
+              .from("produtos")
+              .remove([imagePath]);
+            if (deleteError) {
+              console.warn("⚠️ [deleteProduto] Erro ao deletar imagem:", imagePath, deleteError);
+            }
+          }
+        } catch (error) {
+          console.warn("⚠️ [deleteProduto] Erro ao processar URL da imagem:", imagemUrl, error);
+        }
+      }
+    }
+  }
+
+  // Deletar produto do banco
   const { error } = await supabaseAdmin
     .from("produtos")
     .delete()
