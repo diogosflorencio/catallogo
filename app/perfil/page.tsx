@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Chrome } from "lucide-react";
+import Link from "next/link";
 
 export default function PerfilPage() {
   const { user, loading } = useAuth();
@@ -98,7 +99,14 @@ export default function PerfilPage() {
             </button>
 
             <p className="text-xs text-center text-foreground/60 mt-6">
-              Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade
+              Ao continuar, você concorda com nossos{" "}
+              <Link href="/termos-de-servico" className="text-primary hover:underline">
+                Termos de Serviço
+              </Link>
+              {" "}e{" "}
+              <Link href="/politica-de-privacidade" className="text-primary hover:underline">
+                Política de Privacidade
+              </Link>
             </p>
           </div>
 
