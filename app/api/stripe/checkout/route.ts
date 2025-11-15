@@ -7,6 +7,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se a chave secreta do Stripe está configurada
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error("❌ [Stripe Checkout] STRIPE_SECRET_KEY não está configurada!");
+      return NextResponse.json(
+        { error: "Configuração do Stripe incompleta. Entre em contato com o suporte." },
+        { status: 500 }
+      );
+    }
+
     const { plan, userId } = await request.json();
 
     if (!plan || !userId) {
@@ -28,9 +37,13 @@ export async function POST(request: NextRequest) {
     const priceId = plan === "pro" ? STRIPE_PRICE_IDS.pro : STRIPE_PRICE_IDS.premium;
 
     if (!priceId) {
+      const missingVar = plan === "pro" ? "STRIPE_PRICE_ID_PRO" : "STRIPE_PRICE_ID_PREMIUM";
       console.error(`❌ [Stripe Checkout] Price ID não configurado para plano: ${plan}`);
+      console.error(`❌ [Stripe Checkout] Variável de ambiente ausente: ${missingVar}`);
       return NextResponse.json(
-        { error: `Configuração de preço não encontrada para o plano ${plan}. Entre em contato com o suporte.` },
+        { 
+          error: `Configuração de preço não encontrada para o plano ${plan}. Verifique se a variável de ambiente ${missingVar} está configurada no Vercel.` 
+        },
         { status: 500 }
       );
     }
@@ -69,9 +82,24 @@ export async function POST(request: NextRequest) {
       sessionUrl: session.url,
     });
   } catch (error: any) {
-    console.error("Erro ao criar sessão Stripe:", error);
+    console.error("❌ [Stripe Checkout] Erro ao criar sessão Stripe:", error);
+    console.error("❌ [Stripe Checkout] Detalhes do erro:", {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+    });
+    
+    // Mensagem de erro mais amigável
+    let errorMessage = "Erro ao processar pagamento. Tente novamente.";
+    if (error.message) {
+      errorMessage = error.message;
+    } else if (error.type === "StripeInvalidRequestError") {
+      errorMessage = "Erro na configuração do Stripe. Verifique os Price IDs configurados.";
+    }
+    
     return NextResponse.json(
-      { error: error.message },
+      { error: errorMessage },
       { status: 500 }
     );
   }

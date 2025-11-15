@@ -244,16 +244,26 @@ function ContaPageContent() {
         body: JSON.stringify({ plan, userId: user.uid }),
       });
 
-      const { sessionUrl, sessionId } = await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao iniciar checkout. Tente novamente.");
+      }
+
+      const { sessionUrl, sessionId } = data;
       if (!sessionUrl) {
-        throw new Error("URL da sessão Stripe não recebida.");
+        throw new Error(data.error || "URL da sessão Stripe não recebida.");
       }
       if (sessionId) {
         setCheckoutConfirmed(false);
       }
       window.location.href = sessionUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao iniciar checkout:", error);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao iniciar checkout. Tente novamente.",
+      });
     }
   }
 
