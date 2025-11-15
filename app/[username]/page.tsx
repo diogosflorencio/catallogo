@@ -79,7 +79,7 @@ export default function PublicProfilePage() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-8">
-        {catalogosPublicos.length === 0 ? (
+        {catalogos.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-foreground/60">Nenhum catálogo público disponível</p>
           </div>
@@ -89,7 +89,7 @@ export default function PublicProfilePage() {
               Meus Catálogos
             </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {catalogosPublicos.map((catalogo) => (
+                    {catalogos.map((catalogo) => (
                       <div
                         key={catalogo.id}
                         className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
