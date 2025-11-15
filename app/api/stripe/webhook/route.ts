@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         console.log(`ℹ️ [Webhook] Subscription deletada: ${subscription.id}, Customer: ${customerId}`);
         
         // Buscar usuário pelo stripe_customer_id
-        if (customerId) {
+        if (customerId && supabaseAdmin) {
           const { data: users } = await supabaseAdmin
             .from("users")
             .select("id")
@@ -126,6 +126,8 @@ export async function POST(request: NextRequest) {
           } else {
             console.warn(`⚠️ [Webhook] Usuário não encontrado para customer_id: ${customerId}`);
           }
+        } else if (!supabaseAdmin) {
+          console.error("❌ [Webhook] Supabase não está configurado");
         }
         break;
       }
