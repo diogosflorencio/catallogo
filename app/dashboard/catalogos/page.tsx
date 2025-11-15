@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getCatalogos } from "@/lib/supabase/database";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
@@ -43,8 +42,20 @@ export default function CatalogosPage() {
       if (response.ok) {
         const userProfile = await response.json();
         setProfile(userProfile);
-        const cats = await getCatalogos(user.uid);
-        setCatalogos(cats);
+        
+        // Buscar catálogos via API route (retorna todos, públicos e privados)
+        const catalogosResponse = await fetch("/api/catalogos", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (catalogosResponse.ok) {
+          const cats = await catalogosResponse.json();
+          setCatalogos(cats);
+        } else {
+          console.error("Erro ao buscar catálogos:", await catalogosResponse.text());
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -145,15 +156,15 @@ export default function CatalogosPage() {
                 )}
                 <div className="flex items-center justify-between mb-4">
                   <span
-                    className={`text-xs px-2 py-1 rounded ${
+                    className={`text-xs px-2 py-1 rounded font-medium ${
                       catalogo.public
                         ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
+                        : "bg-orange-100 text-orange-700"
                     }`}
                   >
-                    {catalogo.public ? "Público" : "Privado"}
+                    {catalogo.public ? "✓ Público" : "🔒 Privado"}
                   </span>
-                  {catalogo.public && profile?.username && (
+                  {catalogo.public && profile?.username ? (
                     <div className="flex flex-col gap-1">
                       <Link
                         href={`/${profile.username}/${catalogo.slug}`}
@@ -172,6 +183,10 @@ export default function CatalogosPage() {
                         <ExternalLink className="w-3 h-3" />
                       </Link>
                     </div>
+                  ) : (
+                    <span className="text-xs text-foreground/50">
+                      Não visível publicamente
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">

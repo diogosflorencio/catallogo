@@ -98,15 +98,15 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
               )}
               <div className="flex items-center justify-between">
                 <span
-                  className={`text-xs px-2 py-1 rounded ${
+                  className={`text-xs px-2 py-1 rounded font-medium ${
                     catalogo.public
                       ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700"
+                      : "bg-orange-100 text-orange-700"
                   }`}
                 >
-                  {catalogo.public ? "Público" : "Privado"}
+                  {catalogo.public ? "✓ Público" : "🔒 Privado"}
                 </span>
-                {catalogo.public && profile?.username && (
+                {catalogo.public && profile?.username ? (
                   <div className="flex flex-col gap-1">
                     <Link
                       href={`/${profile.username}/${catalogo.slug}`}
@@ -125,6 +125,10 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                       <ExternalLink className="w-3 h-3" />
                     </Link>
                   </div>
+                ) : (
+                  <span className="text-xs text-foreground/50">
+                    Não visível publicamente
+                  </span>
                 )}
               </div>
             </motion.div>

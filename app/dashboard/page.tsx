@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getCatalogos } from "@/lib/supabase/database";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
@@ -46,8 +45,20 @@ export default function DashboardPage() {
           return;
         }
         setProfile(userProfile);
-        const cats = await getCatalogos(user.uid);
-        setCatalogos(cats);
+        
+        // Buscar catálogos via API route (retorna todos, públicos e privados)
+        const catalogosResponse = await fetch("/api/catalogos", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (catalogosResponse.ok) {
+          const cats = await catalogosResponse.json();
+          setCatalogos(cats);
+        } else {
+          console.error("Erro ao buscar catálogos:", await catalogosResponse.text());
+        }
       } else {
         console.error("Erro ao buscar perfil:", await response.text());
       }

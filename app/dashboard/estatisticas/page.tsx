@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getCatalogos, getAnalyticsStats } from "@/lib/supabase/database";
+import { getAnalyticsStats } from "@/lib/supabase/database";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { motion } from "framer-motion";
@@ -59,8 +59,20 @@ export default function EstatisticasPage() {
       if (response.ok) {
         const userProfile = await response.json();
         setProfile(userProfile);
-        const cats = await getCatalogos(user.uid);
-        setCatalogos(cats);
+        
+        // Buscar catálogos via API route (retorna todos, públicos e privados)
+        const catalogosResponse = await fetch("/api/catalogos", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (catalogosResponse.ok) {
+          const cats = await catalogosResponse.json();
+          setCatalogos(cats);
+        } else {
+          console.error("Erro ao buscar catálogos:", await catalogosResponse.text());
+        }
         
         // Buscar estatísticas reais
         if (userProfile.username) {
