@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateUserProfile } from "@/lib/supabase/database";
+import { updateUserProfile, getUserProfile } from "@/lib/supabase/database";
 import { verifyIdToken } from "@/lib/firebase/admin";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,32 @@ export async function POST(request: NextRequest) {
     const { data } = body;
 
     console.log("📝 [API /api/user/update] Recebido:", { userId, data });
+
+    // Se está atualizando a foto de perfil, deletar a anterior
+    if (data.custom_photo_url) {
+      const currentProfile = await getUserProfile(userId);
+      if (currentProfile?.custom_photo_url && currentProfile.custom_photo_url !== data.custom_photo_url) {
+        try {
+          // Extrair path da URL
+          const urlObj = new URL(currentProfile.custom_photo_url);
+          // As imagens de perfil são salvas no bucket "produtos" com path "perfis/..."
+          const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/produtos\/(.+)/);
+          if (pathMatch && supabaseAdmin) {
+            const imagePath = pathMatch[1];
+            const { error: deleteError } = await supabaseAdmin.storage
+              .from("produtos")
+              .remove([imagePath]);
+            if (deleteError) {
+              console.warn("⚠️ [API /api/user/update] Erro ao deletar imagem anterior:", deleteError);
+            } else {
+              console.log("✅ [API /api/user/update] Imagem anterior deletada com sucesso");
+            }
+          }
+        } catch (error) {
+          console.warn("⚠️ [API /api/user/update] Erro ao processar URL da imagem anterior:", error);
+        }
+      }
+    }
 
     await updateUserProfile(userId, data);
     

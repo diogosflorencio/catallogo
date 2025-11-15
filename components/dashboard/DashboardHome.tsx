@@ -87,8 +87,8 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
+      {/* Stats Cards e Links */}
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
         <div className="bg-background-alt rounded-xl p-6">
           <p className="text-sm text-foreground/60 mb-1">Total de Catálogos</p>
           <p className="text-3xl font-display font-semibold">
@@ -101,76 +101,69 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
             {profile.plano || 'free'}
           </p>
         </div>
-      </div>
-
-      {/* Seus Links */}
-      {profile.username && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-background-alt rounded-xl p-6 mb-8"
-        >
-          <h2 className="text-2xl font-display font-semibold mb-4">
-            Seus Links
-          </h2>
-          <p className="text-sm text-foreground/60 mb-4">
-            Copie clicando no ícone ao lado deles
-          </p>
-          
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            {/* Link do perfil */}
-            <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-foreground/60 mb-1">Você pode compartilhar todos os seus catálogos:</p>
-                <p className="text-sm font-mono text-foreground/80 break-all">
-                  {baseUrl || 'carregando...'}/{profile.username}
-                </p>
-              </div>
-              <button
-                onClick={() => copyToClipboard(`${baseUrl}/${profile.username}`)}
-                className="ml-3 p-2 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                title="Copiar link"
-              >
-                {copiedLink === `${baseUrl}/${profile.username}` ? (
-                  <Check className="w-5 h-5 text-green-500" />
-                ) : (
-                  <Copy className="w-5 h-5 text-foreground/60" />
-                )}
-              </button>
-            </div>
-
-            {/* Links dos catálogos */}
-            {catalogos.length > 0 && (
-              <>
-                <p className="text-xs text-foreground/60 mb-2">Ou catálogos específicos:</p>
-                {catalogos.map((catalogo) => (
-                  <div
-                    key={catalogo.id}
-                    className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20"
+        {profile.username && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-background-alt rounded-xl p-6"
+          >
+            <h2 className="text-sm text-foreground/60 mb-3">Seus Links</h2>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {/* Link do perfil */}
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-foreground/60 mb-1">Você pode compartilhar todos os seus catálogos:</p>
+                  <p className="text-xs font-mono text-foreground/80 break-all">
+                    {baseUrl || 'carregando...'}/{profile.username}
+                  </p>
+                  {catalogos.length > 0 && (
+                    <>
+                      <p className="text-xs text-foreground/60 mt-2 mb-1">Ou catálogos específicos:</p>
+                      {catalogos.slice(0, 2).map((catalogo) => (
+                        <div key={catalogo.id} className="mb-1 last:mb-0">
+                          <p className="text-xs font-mono text-foreground/80 break-all">
+                            {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
+                          </p>
+                        </div>
+                      ))}
+                      {catalogos.length > 2 && (
+                        <p className="text-xs text-foreground/50 mt-1">+{catalogos.length - 2} mais...</p>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="ml-2 flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => copyToClipboard(`${baseUrl}/${profile.username}`)}
+                    className="p-1.5 hover:bg-background-alt rounded-lg transition-colors"
+                    title="Copiar link do perfil"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-mono text-foreground/80 break-all">
-                        {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
-                      </p>
-                    </div>
+                    {copiedLink === `${baseUrl}/${profile.username}` ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-foreground/60" />
+                    )}
+                  </button>
+                  {catalogos.slice(0, 2).map((catalogo) => (
                     <button
+                      key={catalogo.id}
                       onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
-                      className="ml-3 p-2 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                      title="Copiar link"
+                      className="p-1.5 hover:bg-background-alt rounded-lg transition-colors"
+                      title="Copiar link do catálogo"
                     >
                       {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
-                        <Check className="w-5 h-5 text-green-500" />
+                        <Check className="w-4 h-4 text-green-500" />
                       ) : (
-                        <Copy className="w-5 h-5 text-foreground/60" />
+                        <Copy className="w-4 h-4 text-foreground/60" />
                       )}
                     </button>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </motion.div>
-      )}
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
 
       {/* Catálogos */}
       <div className="mb-6">

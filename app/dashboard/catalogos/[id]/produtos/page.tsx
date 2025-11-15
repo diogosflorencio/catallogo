@@ -221,9 +221,20 @@ export default function ProdutosPage({
                   ) : null;
                 })()}
                 <div className="p-6">
-                  <h3 className="font-display font-semibold text-lg mb-2">
-                    {produto.nome}
-                  </h3>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-display font-semibold text-lg flex-1">
+                      {produto.nome}
+                    </h3>
+                    <span
+                      className={`text-xs px-2 py-1 rounded font-medium ml-2 flex-shrink-0 ${
+                        produto.visivel
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                      }`}
+                    >
+                      {produto.visivel ? "✓ Visível" : "🔒 Oculto"}
+                    </span>
+                  </div>
                   {produto.descricao && (
                     <p className="text-sm text-foreground/60 mb-2 line-clamp-2">
                       {produto.descricao}

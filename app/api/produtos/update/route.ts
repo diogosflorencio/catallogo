@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateProduto, getCatalogo } from "@/lib/supabase/database";
+import { updateProduto, getCatalogo, getProduto } from "@/lib/supabase/database";
 import { verifyIdToken } from "@/lib/firebase/admin";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +30,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Catálogo não encontrado" }, { status: 404 });
     }
 
+    // Buscar produto atual para obter imagens antigas
+    const produtoAtual = await getProduto(catalogoId, id);
+    const imagensAntigas: string[] = [];
+    if (produtoAtual) {
+      const imagens = (produtoAtual.imagens_urls && Array.isArray(produtoAtual.imagens_urls) && produtoAtual.imagens_urls.length > 0)
+        ? produtoAtual.imagens_urls
+        : (produtoAtual.imagem_url ? [produtoAtual.imagem_url] : []);
+      imagensAntigas.push(...imagens);
+    }
+
     // Processar imagens: usar imagens_urls se fornecido, senão usar imagem_url
     const updateData: any = {
       nome,
@@ -39,15 +50,44 @@ export async function POST(request: NextRequest) {
       visivel: visivel !== undefined ? Boolean(visivel) : true,
     };
 
+    let novasImagensUrls: string[] = [];
     if (imagens_urls !== undefined) {
-      const imagensUrls = Array.isArray(imagens_urls) 
+      novasImagensUrls = Array.isArray(imagens_urls) 
         ? imagens_urls.slice(0, 3) // Limitar a 3 imagens
         : [];
-      updateData.imagens_urls = imagensUrls;
-      updateData.imagem_url = imagensUrls[0] || null; // Primeira imagem para compatibilidade
+      updateData.imagens_urls = novasImagensUrls;
+      updateData.imagem_url = novasImagensUrls[0] || null; // Primeira imagem para compatibilidade
     } else if (imagem_url !== undefined) {
+      novasImagensUrls = imagem_url ? [imagem_url] : [];
       updateData.imagem_url = imagem_url || null;
-      updateData.imagens_urls = imagem_url ? [imagem_url] : [];
+      updateData.imagens_urls = novasImagensUrls;
+    }
+
+    // Deletar imagens antigas que não estão mais na lista
+    if (imagensAntigas.length > 0 && supabaseAdmin) {
+      const imagensParaDeletar = imagensAntigas.filter(img => !novasImagensUrls.includes(img));
+      for (const imagemUrl of imagensParaDeletar) {
+        if (imagemUrl) {
+          try {
+            // Extrair path da URL
+            const urlObj = new URL(imagemUrl);
+            const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/produtos\/(.+)/);
+            if (pathMatch) {
+              const imagePath = pathMatch[1];
+              const { error: deleteError } = await supabaseAdmin.storage
+                .from("produtos")
+                .remove([imagePath]);
+              if (deleteError) {
+                console.warn("⚠️ [API /api/produtos/update] Erro ao deletar imagem:", imagePath, deleteError);
+              } else {
+                console.log("✅ [API /api/produtos/update] Imagem deletada:", imagePath);
+              }
+            }
+          } catch (error) {
+            console.warn("⚠️ [API /api/produtos/update] Erro ao processar URL da imagem:", imagemUrl, error);
+          }
+        }
+      }
     }
 
     await updateProduto(catalogoId, id, updateData);
