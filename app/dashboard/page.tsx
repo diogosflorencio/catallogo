@@ -6,27 +6,30 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { Loading } from "@/components/ui/Loading";
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogos, setCatalogos] = useState<Catalogo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user) {
       loadData();
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
   async function loadData() {
     if (!user) return;
     
+    setLoading(true);
     try {
       // Buscar perfil via API route (não usar diretamente no cliente)
       const token = await user.getIdToken();
@@ -64,19 +67,21 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando dashboard..." fullScreen />;
   }
 
-  if (!user || !profile) {
-    return null; // Será redirecionado pelo useEffect
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile) {
+    return <Loading message="Verificando seu perfil..." fullScreen />;
   }
 
   return (

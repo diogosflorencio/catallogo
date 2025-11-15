@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Apenas imagens são permitidas" }, { status: 400 });
     }
 
-    // Validar tamanho (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "Arquivo muito grande (máximo 5MB)" }, { status: 400 });
+    // Validar tamanho (máximo 10MB antes da compressão)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "Arquivo muito grande (máximo 10MB)" }, { status: 400 });
     }
 
     if (!supabaseAdmin) {

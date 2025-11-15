@@ -6,10 +6,11 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { checkUsernameExists } from "@/lib/supabase/database";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Loading } from "@/components/ui/Loading";
 import { motion } from "framer-motion";
 
 export default function UmPoucoSobreVocePage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -19,22 +20,24 @@ export default function UmPoucoSobreVocePage() {
   });
   const [usernameError, setUsernameError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
     // Se não estiver logado, redirecionar para /perfil
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       window.location.href = "/perfil";
       return;
     }
     
     // Se já tiver perfil completo, redirecionar para dashboard
-    if (user && !loading) {
+    if (user && !authLoading) {
       checkProfile();
     }
-  }, [user, loading]);
+  }, [user, authLoading]);
 
   async function checkProfile() {
     if (!user) return;
+    setCheckingProfile(true);
     try {
       // Buscar perfil via API route
       const token = await user.getIdToken();
@@ -72,6 +75,8 @@ export default function UmPoucoSobreVocePage() {
       }
     } catch (error) {
       console.error("Erro ao verificar perfil:", error);
+    } finally {
+      setCheckingProfile(false);
     }
   }
 
@@ -230,16 +235,12 @@ export default function UmPoucoSobreVocePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || checkingProfile) {
+    return <Loading message="Verificando se você tem usuário..." fullScreen />;
   }
 
   if (!user) {
-    return null; // Será redirecionado pelo useEffect
+    return <Loading message="Redirecionando para login..." fullScreen />;
   }
 
   return (

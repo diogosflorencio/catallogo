@@ -6,31 +6,44 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
+import { Loading } from "@/components/ui/Loading";
+import { Modal } from "@/components/ui/Modal";
 import { Plus, Edit, Trash2, ExternalLink, Package } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function CatalogosPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogos, setCatalogos] = useState<Catalogo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; catalogoId: string | null; catalogoNome: string }>({
+    isOpen: false,
+    catalogoId: null,
+    catalogoNome: "",
+  });
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({
+    isOpen: false,
+    message: "",
+  });
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user) {
       loadData();
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
   async function loadData() {
     if (!user) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
       const response = await fetch("/api/user/profile", {
@@ -59,14 +72,25 @@ export default function CatalogosPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  async function handleDelete(catalogoId: string) {
-    if (!user || !confirm("Tem certeza que deseja excluir este catálogo?")) {
-      return;
-    }
-    setDeleting(catalogoId);
+  function openDeleteModal(catalogoId: string, catalogoNome: string) {
+    setDeleteModal({
+      isOpen: true,
+      catalogoId,
+      catalogoNome,
+    });
+  }
+
+  async function handleDelete() {
+    if (!user || !deleteModal.catalogoId) return;
+    
+    setDeleting(deleteModal.catalogoId);
+    setDeleteModal({ isOpen: false, catalogoId: null, catalogoNome: "" });
+    
     try {
       const token = await user.getIdToken();
       const response = await fetch("/api/catalogos/delete", {
@@ -76,7 +100,7 @@ export default function CatalogosPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          id: catalogoId,
+          id: deleteModal.catalogoId,
         }),
       });
 
@@ -85,26 +109,32 @@ export default function CatalogosPage() {
       } else {
         const errorData = await response.json();
         console.error("Erro ao deletar catálogo:", errorData);
-        alert(`Erro ao deletar catálogo: ${errorData.error || "Erro desconhecido"}`);
+        setErrorModal({
+          isOpen: true,
+          message: errorData.error || "Erro desconhecido ao deletar catálogo",
+        });
       }
     } catch (error: any) {
       console.error("Erro ao excluir:", error);
-      alert(`Erro ao deletar catálogo: ${error.message || "Erro desconhecido"}`);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro desconhecido ao deletar catálogo",
+      });
     } finally {
       setDeleting(null);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando catálogos..." fullScreen />;
   }
 
-  if (!user || !profile) {
-    return null; // Será redirecionado pelo useEffect
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile) {
+    return <Loading message="Carregando perfil..." fullScreen />;
   }
 
   return (
@@ -211,7 +241,7 @@ export default function CatalogosPage() {
                     </Link>
                     <Button
                       variant="outline"
-                      onClick={() => handleDelete(catalogo.id)}
+                      onClick={() => openDeleteModal(catalogo.id, catalogo.nome)}
                       disabled={deleting === catalogo.id}
                       className="flex-1"
                     >
@@ -225,6 +255,29 @@ export default function CatalogosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmação de exclusão */}
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, catalogoId: null, catalogoNome: "" })}
+        title="Excluir Catálogo"
+        message={`Tem certeza que deseja excluir o catálogo "${deleteModal.catalogoNome}"?\n\nEsta ação não pode ser desfeita e todos os produtos deste catálogo serão excluídos.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleDelete}
+        variant="danger"
+      />
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </DashboardLayout>
   );
 }

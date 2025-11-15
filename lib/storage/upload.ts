@@ -41,8 +41,8 @@ export async function uploadImage(
   }
 
   try {
-    // Comprimir imagem no cliente
-    const compressedFile = await compressImage(file);
+    // Comprimir imagem no cliente antes do upload
+    const compressedFile = await compressImage(file, 1200, 1200, 0.5, 0.75);
     
     // Upload para Supabase Storage (bucket público)
     const { data, error } = await supabase.storage
@@ -50,6 +50,7 @@ export async function uploadImage(
       .upload(path, compressedFile, {
         cacheControl: "3600",
         upsert: false,
+        contentType: compressedFile.type,
       });
 
     if (error) {
@@ -110,7 +111,14 @@ export async function deleteImage(path: string): Promise<void> {
   }
 }
 
-async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promise<File> {
+// Comprimir imagem otimizada para reduzir tamanho mantendo qualidade
+export async function compressImage(
+  file: File,
+  maxWidth = 1200,
+  maxHeight = 1200,
+  maxSizeMB = 0.5, // Máximo 500KB
+  quality = 0.75
+): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -122,9 +130,11 @@ async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promis
         let width = img.width;
         let height = img.height;
 
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
+        // Calcular dimensões mantendo proporção
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = width * ratio;
+          height = height * ratio;
         }
 
         canvas.width = width;
@@ -136,26 +146,59 @@ async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promis
           return;
         }
 
+        // Melhorar qualidade de renderização
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, width, height);
 
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: file.type,
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              reject(new Error("Erro ao comprimir imagem"));
-            }
-          },
-          file.type,
-          quality
-        );
+        // Tentar comprimir até atingir o tamanho máximo desejado
+        const compress = (currentQuality: number): void => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("Erro ao comprimir imagem"));
+                return;
+              }
+
+              const sizeMB = blob.size / (1024 * 1024);
+              
+              // Se o tamanho está OK ou qualidade já está muito baixa, aceitar
+              if (sizeMB <= maxSizeMB || currentQuality <= 0.3) {
+                // Converter para WebP se possível (melhor compressão)
+                const finalType = file.type === "image/png" ? "image/png" : "image/jpeg";
+                const finalFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + (finalType === "image/png" ? ".png" : ".jpg"), {
+                  type: finalType,
+                  lastModified: Date.now(),
+                });
+                resolve(finalFile);
+              } else {
+                // Reduzir qualidade e tentar novamente
+                compress(Math.max(0.3, currentQuality - 0.1));
+              }
+            },
+            file.type === "image/png" ? "image/png" : "image/jpeg",
+            currentQuality
+          );
+        };
+
+        compress(quality);
       };
       img.onerror = reject;
     };
     reader.onerror = reject;
   });
+}
+
+// Upload múltiplas imagens
+export async function uploadImages(
+  files: File[],
+  userId: string,
+  token?: string
+): Promise<string[]> {
+  const uploadPromises = files.map((file, index) => {
+    const path = `produtos/${userId}/${Date.now()}_${index}_${file.name}`;
+    return uploadImage(file, path, token);
+  });
+  
+  return Promise.all(uploadPromises);
 }

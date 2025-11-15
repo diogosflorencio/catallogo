@@ -6,6 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { getAnalyticsStats } from "@/lib/supabase/database";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Loading } from "@/components/ui/Loading";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -22,10 +23,11 @@ import {
 
 
 export default function EstatisticasPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogos, setCatalogos] = useState<Catalogo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalViews: 0,
     totalClicks: 0,
@@ -36,18 +38,19 @@ export default function EstatisticasPage() {
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user) {
       loadData();
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
   async function loadData() {
     if (!user) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
       const response = await fetch("/api/user/profile", {
@@ -82,19 +85,21 @@ export default function EstatisticasPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando estatísticas..." fullScreen />;
   }
 
-  if (!user || !profile) {
-    return null; // Será redirecionado pelo useEffect
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile) {
+    return <Loading message="Carregando perfil..." fullScreen />;
   }
 
   return (

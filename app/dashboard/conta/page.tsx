@@ -9,6 +9,8 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Loading } from "@/components/ui/Loading";
+import { Modal } from "@/components/ui/Modal";
 import { PLANS, PlanType } from "@/lib/stripe/config";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
@@ -16,11 +18,12 @@ import { signOut } from "@/lib/firebase/auth-simple";
 import Link from "next/link";
 
 function ContaPageContent() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     nomeLoja: "",
@@ -29,17 +32,20 @@ function ContaPageContent() {
     mensagemTemplate: "",
   });
   const [usernameError, setUsernameError] = useState("");
+  const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user) {
       loadData();
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -59,6 +65,7 @@ function ContaPageContent() {
   async function loadData() {
     if (!user) return;
     
+    setLoading(true);
     try {
       // Buscar perfil via API route
       const token = await user.getIdToken();
@@ -82,28 +89,46 @@ function ContaPageContent() {
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleSave() {
     if (!user) {
-      alert("Você precisa fazer login para editar seu perfil");
+      setErrorModal({
+        isOpen: true,
+        message: "Você precisa fazer login para editar seu perfil",
+      });
       return;
     }
     if (!profile) return;
+    
+    // Validar username antes de salvar
+    if (formData.username !== profile.username) {
+      if (!formData.username || formData.username.length < 3) {
+        setUsernameError("Username deve ter pelo menos 3 caracteres");
+        return;
+      }
+      
+      if (!/^[a-z0-9_-]+$/.test(formData.username)) {
+        setUsernameError("Username pode conter apenas letras minúsculas, números, hífen e underscore");
+        return;
+      }
+      
+      const exists = await checkUsernameExists(formData.username.toLowerCase());
+      if (exists) {
+        setUsernameError("Este username já está em uso. Por favor, escolha outro.");
+        return;
+      }
+    }
+    
     setSaving(true);
     try {
       const token = await user.getIdToken();
 
       // Se username mudou, atualizar
       if (formData.username !== profile.username) {
-        const exists = await checkUsernameExists(formData.username.toLowerCase());
-        if (exists) {
-          setUsernameError("Username já está em uso");
-          setSaving(false);
-          return;
-        }
-        
         const usernameResponse = await fetch("/api/user/username", {
           method: "POST",
           headers: {
@@ -144,9 +169,16 @@ function ContaPageContent() {
       }
 
       await loadData();
-      alert("Perfil atualizado com sucesso!");
+      setSuccessModal({
+        isOpen: true,
+        message: "Perfil atualizado com sucesso!",
+      });
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao atualizar perfil. Tente novamente.",
+      });
       if (error.message.includes("Username")) {
         setUsernameError(error.message);
       }
@@ -205,16 +237,16 @@ function ContaPageContent() {
     router.push("/");
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando configurações da conta..." fullScreen />;
   }
 
-  if (!user || !profile) {
-    return null; // Será redirecionado pelo useEffect
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile) {
+    return <Loading message="Carregando perfil..." fullScreen />;
   }
 
   return (
@@ -242,16 +274,43 @@ function ContaPageContent() {
             </div>
             <div>
               <label className="block mb-2 font-medium">Username</label>
-              <Input
-                value={formData.username}
-                onChange={(e) => {
-                  setFormData({ ...formData, username: e.target.value });
-                  setUsernameError("");
-                }}
-                placeholder="username"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={formData.username}
+                  onChange={async (e) => {
+                    const newUsername = e.target.value.toLowerCase();
+                    setFormData({ ...formData, username: newUsername });
+                    setUsernameError("");
+                    
+                    // Validar username em tempo real se mudou do original
+                    if (newUsername && newUsername !== profile?.username && newUsername.length >= 3) {
+                      setCheckingUsername(true);
+                      try {
+                        const exists = await checkUsernameExists(newUsername);
+                        if (exists) {
+                          setUsernameError("Este username já está em uso");
+                        }
+                      } catch (error) {
+                        console.error("Erro ao verificar username:", error);
+                      } finally {
+                        setCheckingUsername(false);
+                      }
+                    }
+                  }}
+                  placeholder="username"
+                  className="flex-1"
+                />
+                {checkingUsername && (
+                  <div className="flex items-center px-3">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
               {usernameError && (
                 <p className="text-sm text-red-500 mt-1">{usernameError}</p>
+              )}
+              {!usernameError && formData.username && formData.username !== profile?.username && !checkingUsername && (
+                <p className="text-sm text-green-600 mt-1">✓ Username disponível</p>
               )}
               <p className="text-sm text-foreground/60 mt-1">
                 Seu link: <span className="text-primary font-medium">/{formData.username || "username"}</span>
@@ -402,6 +461,28 @@ function ContaPageContent() {
           </Button>
         </motion.div>
       </div>
+
+      {/* Modal de sucesso */}
+      <Modal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal({ isOpen: false, message: "" })}
+        title="Sucesso"
+        message={successModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
+
+      {/* Modal de erro */}
+      <Modal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, message: "" })}
+        title="Erro"
+        message={errorModal.message}
+        confirmText="OK"
+        showCancel={false}
+        variant="default"
+      />
     </DashboardLayout>
   );
 }

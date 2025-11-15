@@ -3,14 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import {
-  getCatalogo,
-} from "@/lib/supabase/database";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Loading } from "@/components/ui/Loading";
 import { motion } from "framer-motion";
 
 export default function EditarCatalogoPage({
@@ -18,11 +16,12 @@ export default function EditarCatalogoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [catalogoId, setCatalogoId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -41,42 +40,57 @@ export default function EditarCatalogoPage({
 
   useEffect(() => {
     // Exigir login
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/perfil");
       return;
     }
     if (user && catalogoId) {
       loadData();
     }
-  }, [user, loading, router, catalogoId]);
+  }, [user, authLoading, router, catalogoId]);
 
   async function loadData() {
     if (!user || !catalogoId) return;
     
+    setLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      
+      // Buscar perfil e catálogo em paralelo
+      const [profileResponse, catalogoResponse] = await Promise.all([
+        fetch("/api/user/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`/api/catalogos/${catalogoId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
 
-      if (response.ok) {
-        const userProfile = await response.json();
+      if (profileResponse.ok) {
+        const userProfile = await profileResponse.json();
         setProfile(userProfile);
       }
+
+      if (catalogoResponse.ok) {
+        const cat = await catalogoResponse.json();
+        setCatalogo(cat);
+        setFormData({
+          nome: cat.nome,
+          slug: cat.slug,
+          descricao: cat.descricao || "",
+          public: cat.public !== undefined ? cat.public : true,
+        });
+      } else if (catalogoResponse.status === 404) {
+        router.push("/dashboard/catalogos");
+      }
     } catch (error) {
-      console.error("Erro ao carregar perfil:", error);
-    }
-    const cat = await getCatalogo(user.uid, catalogoId);
-    if (cat) {
-      setCatalogo(cat);
-      setFormData({
-        nome: cat.nome,
-        slug: cat.slug,
-        descricao: cat.descricao || "",
-        public: cat.public || true,
-      });
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -140,23 +154,16 @@ export default function EditarCatalogoPage({
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-lavender">Carregando...</div>
-      </div>
-    );
+  if (authLoading || loading) {
+    return <Loading message="Carregando catálogo..." fullScreen />;
   }
 
-  if (!user || !profile || !catalogo) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-foreground/70 mb-4">Você precisa fazer login para editar um catálogo</p>
-          <a href="/" className="text-primary hover:underline">Voltar para home</a>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return <Loading message="Redirecionando para login..." fullScreen />;
+  }
+
+  if (!profile || !catalogo) {
+    return <Loading message="Carregando dados do catálogo..." fullScreen />;
   }
 
   return (
