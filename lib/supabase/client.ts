@@ -50,23 +50,31 @@ export interface AnalyticsEventRow {
 }
 
 export async function trackEvent(event: AnalyticsEvent): Promise<void> {
-  if (!supabase) {
-    console.warn("Supabase não configurado. Evento não registrado.");
-    return;
-  }
-  try {
-    // Esta função será chamada do client, mas os dados sensíveis
-    // devem ser processados via Firebase Functions
-    await supabase.from("analytics_events").insert({
-      type: event.type,
-      username: event.username,
-      catalog_slug: event.catalogSlug,
-      produto_id: event.produtoId || null,
-      timestamp: event.timestamp.toISOString(),
-    });
-  } catch (error) {
-    console.error("Erro ao registrar evento:", error);
-    // Não bloquear a aplicação se analytics falhar
-  }
+  // ANALYTICS DESATIVADO TEMPORARIAMENTE
+  // Para economizar no plano gratuito do banco de dados
+  // TODO: Reativar quando implementar versão premium com analytics
+  // A lógica está mantida para uso futuro - apenas a inserção no banco está comentada
+  
+  // if (!supabase) {
+  //   console.warn("Supabase não configurado. Evento não registrado.");
+  //   return;
+  // }
+  // try {
+  //   // Esta função será chamada do client, mas os dados sensíveis
+  //   // devem ser processados via Firebase Functions
+  //   await supabase.from("analytics_events").insert({
+  //     type: event.type,
+  //     username: event.username,
+  //     catalog_slug: event.catalogSlug,
+  //     produto_id: event.produtoId || null,
+  //     timestamp: event.timestamp.toISOString(),
+  //   });
+  // } catch (error) {
+  //   console.error("Erro ao registrar evento:", error);
+  //   // Não bloquear a aplicação se analytics falhar
+  // }
+  
+  // Retornar sem erro para não quebrar o código que chama esta função
+  return;
 }
 

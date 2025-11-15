@@ -782,87 +782,102 @@ export interface AnalyticsStats {
 }
 
 export async function getAnalyticsStats(username: string): Promise<AnalyticsStats> {
-  if (!supabaseAdmin) {
-    return {
-      totalViews: 0,
-      totalClicks: 0,
-      conversionRate: 0,
-      viewsByDate: [],
-      clicksByCatalog: [],
-    };
-  }
+  // ANALYTICS DESATIVADO TEMPORARIAMENTE
+  // Para economizar no plano gratuito do banco de dados
+  // TODO: Reativar quando implementar versão premium com analytics
+  // A lógica está mantida para uso futuro - apenas a busca no banco está comentada
+  
+  // Retornar dados vazios sem fazer query no banco
+  return {
+    totalViews: 0,
+    totalClicks: 0,
+    conversionRate: 0,
+    viewsByDate: [],
+    clicksByCatalog: [],
+  };
 
-  try {
-    // Buscar todos os eventos do usuário
-    const { data: events } = await supabaseAdmin
-      .from("analytics_events")
-      .select("*")
-      .eq("username", username)
-      .order("timestamp", { ascending: false });
+  // CÓDIGO COMENTADO - REATIVAR NO FUTURO
+  // if (!supabaseAdmin) {
+  //   return {
+  //     totalViews: 0,
+  //     totalClicks: 0,
+  //     conversionRate: 0,
+  //     viewsByDate: [],
+  //     clicksByCatalog: [],
+  //   };
+  // }
 
-    if (!events || events.length === 0) {
-      return {
-        totalViews: 0,
-        totalClicks: 0,
-        conversionRate: 0,
-        viewsByDate: [],
-        clicksByCatalog: [],
-      };
-    }
+  // try {
+  //   // Buscar todos os eventos do usuário
+  //   const { data: events } = await supabaseAdmin
+  //     .from("analytics_events")
+  //     .select("*")
+  //     .eq("username", username)
+  //     .order("timestamp", { ascending: false });
 
-    const views = events.filter((e) => e.type === "view");
-    const clicks = events.filter((e) => e.type === "whatsapp_click");
+  //   if (!events || events.length === 0) {
+  //     return {
+  //       totalViews: 0,
+  //       totalClicks: 0,
+  //       conversionRate: 0,
+  //       viewsByDate: [],
+  //       clicksByCatalog: [],
+  //     };
+  //   }
 
-    // Agrupar views por data (últimos 7 dias)
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return date.toISOString().split("T")[0];
-    });
+  //   const views = events.filter((e) => e.type === "view");
+  //   const clicks = events.filter((e) => e.type === "whatsapp_click");
 
-    const viewsByDate = last7Days.map((date) => {
-      const count = views.filter((v) => {
-        const eventDate = new Date(v.timestamp).toISOString().split("T")[0];
-        return eventDate === date;
-      }).length;
-      return {
-        date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-        views: count,
-      };
-    });
+  //   // Agrupar views por data (últimos 7 dias)
+  //   const last7Days = Array.from({ length: 7 }, (_, i) => {
+  //     const date = new Date();
+  //     date.setDate(date.getDate() - (6 - i));
+  //     return date.toISOString().split("T")[0];
+  //   });
 
-    // Agrupar cliques por catálogo
-    const clicksByCatalogMap = new Map<string, number>();
-    clicks.forEach((click) => {
-      const catalog = click.catalog_slug;
-      clicksByCatalogMap.set(catalog, (clicksByCatalogMap.get(catalog) || 0) + 1);
-    });
+  //   const viewsByDate = last7Days.map((date) => {
+  //     const count = views.filter((v) => {
+  //       const eventDate = new Date(v.timestamp).toISOString().split("T")[0];
+  //       return eventDate === date;
+  //     }).length;
+  //     return {
+  //       date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+  //       views: count,
+  //     };
+  //   });
 
-    const clicksByCatalog = Array.from(clicksByCatalogMap.entries()).map(([catalog, count]) => ({
-      catalog,
-      clicks: count,
-    }));
+  //   // Agrupar cliques por catálogo
+  //   const clicksByCatalogMap = new Map<string, number>();
+  //   clicks.forEach((click) => {
+  //     const catalog = click.catalog_slug;
+  //     clicksByCatalogMap.set(catalog, (clicksByCatalogMap.get(catalog) || 0) + 1);
+  //   });
 
-    const totalViews = views.length;
-    const totalClicks = clicks.length;
-    const conversionRate = totalViews > 0 ? Math.round((totalClicks / totalViews) * 100) : 0;
+  //   const clicksByCatalog = Array.from(clicksByCatalogMap.entries()).map(([catalog, count]) => ({
+  //     catalog,
+  //     clicks: count,
+  //   }));
 
-    return {
-      totalViews,
-      totalClicks,
-      conversionRate,
-      viewsByDate,
-      clicksByCatalog,
-    };
-  } catch (error) {
-    console.error("Erro ao buscar estatísticas:", error);
-    return {
-      totalViews: 0,
-      totalClicks: 0,
-      conversionRate: 0,
-      viewsByDate: [],
-      clicksByCatalog: [],
-    };
-  }
+  //   const totalViews = views.length;
+  //   const totalClicks = clicks.length;
+  //   const conversionRate = totalViews > 0 ? Math.round((totalClicks / totalViews) * 100) : 0;
+
+  //   return {
+  //     totalViews,
+  //     totalClicks,
+  //     conversionRate,
+  //     viewsByDate,
+  //     clicksByCatalog,
+  //   };
+  // } catch (error) {
+  //   console.error("Erro ao buscar estatísticas:", error);
+  //   return {
+  //     totalViews: 0,
+  //     totalClicks: 0,
+  //     conversionRate: 0,
+  //     viewsByDate: [],
+  //     clicksByCatalog: [],
+  //   };
+  // }
 }
 
