@@ -7,6 +7,8 @@ interface ThemeContextType {
   theme: "light" | "dark" | "system";
   setTheme: (theme: "light" | "dark" | "system") => void;
   effectiveTheme: "light" | "dark";
+  appearance: "feminine" | "masculine" | null;
+  setAppearance: (appearance: "feminine" | "masculine" | null) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -24,10 +26,16 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<"light" | "dark" | "system">("system");
   const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
+  const [appearance, setAppearanceState] = useState<"feminine" | "masculine" | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Aplicar aparência do usuário
+    const userAppearance = userProfile?.appearance || "feminine"; // Padrão: feminino
+    setAppearanceState(userAppearance);
+    applyAppearance(userAppearance);
     
     if (isLandingPage) {
       // Landing page: sempre usa preferência do sistema
@@ -72,7 +80,7 @@ export function ThemeProvider({
         return () => mediaQuery.removeEventListener("change", handleChange);
       }
     }
-  }, [isLandingPage, userProfile?.theme]);
+  }, [isLandingPage, userProfile?.theme, userProfile?.appearance]);
 
   function applyTheme(newTheme: "light" | "dark") {
     const root = document.documentElement;
@@ -80,6 +88,15 @@ export function ThemeProvider({
       root.setAttribute("data-theme", "dark");
     } else {
       root.setAttribute("data-theme", "light");
+    }
+  }
+
+  function applyAppearance(newAppearance: "feminine" | "masculine" | null) {
+    const root = document.documentElement;
+    if (newAppearance) {
+      root.setAttribute("data-appearance", newAppearance);
+    } else {
+      root.setAttribute("data-appearance", "feminine"); // Padrão
     }
   }
 
@@ -97,12 +114,17 @@ export function ThemeProvider({
     }
   }
 
+  function setAppearance(newAppearance: "feminine" | "masculine" | null) {
+    setAppearanceState(newAppearance);
+    applyAppearance(newAppearance);
+  }
+
   if (!mounted) {
     return <>{children}</>; // Evitar flash
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, effectiveTheme, appearance, setAppearance }}>
       {children}
     </ThemeContext.Provider>
   );

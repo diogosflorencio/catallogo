@@ -13,19 +13,18 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Loading } from "@/components/ui/Loading";
 import { Modal } from "@/components/ui/Modal";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useTheme } from "@/components/providers/ThemeProvider";
 import { PLANS, PlanType } from "@/lib/stripe/config";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
-import { uploadImage } from "@/lib/storage/upload";
-import { useDropzone } from "react-dropzone";
-import { Upload, X } from "lucide-react";
 import Link from "next/link";
 
 function ContaPageContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setAppearance: setThemeAppearance } = useTheme();
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +39,8 @@ function ContaPageContent() {
   const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false });
+  const [appearance, setAppearance] = useState<"feminine" | "masculine" | null>("feminine");
 
   useEffect(() => {
     // Exigir login
@@ -86,8 +84,7 @@ function ContaPageContent() {
       if (response.ok) {
         const userProfile = await response.json();
         setProfile(userProfile);
-        setCustomPhotoUrl(userProfile.custom_photo_url || null);
-        setPhotoPreview(userProfile.custom_photo_url || null);
+        setAppearance(userProfile.appearance || "feminine");
         setFormData({
           nomeLoja: userProfile.nome_loja || "",
           username: userProfile.username || "",
@@ -104,51 +101,6 @@ function ContaPageContent() {
     }
   }
 
-  const onDropPhoto = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file || !user) return;
-
-    // Preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // Upload
-    setUploadingPhoto(true);
-    try {
-      const token = await user.getIdToken();
-      const path = `perfis/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadImage(file, path, token);
-      console.log("✅ Foto enviada com sucesso, URL:", url);
-      setCustomPhotoUrl(url);
-      setPhotoPreview(url); // Garantir que o preview também use a URL
-    } catch (error: any) {
-      console.error("Erro ao fazer upload da foto:", error);
-      setErrorModal({
-        isOpen: true,
-        message: error.message || "Erro ao fazer upload da foto. Verifique se o bucket está configurado.",
-      });
-      setPhotoPreview(null);
-      setCustomPhotoUrl(null);
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }, [user]);
-
-  const { getRootProps: getRootPropsPhoto, getInputProps: getInputPropsPhoto, isDragActive: isDragActivePhoto } = useDropzone({
-    onDrop: onDropPhoto,
-    accept: {
-      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-    },
-    maxFiles: 1,
-  });
-
-  function removePhoto() {
-    setPhotoPreview(null);
-    setCustomPhotoUrl(null);
-  }
 
   async function handleSave() {
     if (!user) {
@@ -204,15 +156,15 @@ function ContaPageContent() {
         }
       }
 
-      // Atualizar outros campos (incluindo foto customizada)
+      // Atualizar outros campos
       const updateData = {
         nome_loja: formData.nomeLoja,
         whatsapp_number: formData.whatsappNumber,
         mensagem_template: formData.mensagemTemplate,
-        custom_photo_url: customPhotoUrl || null,
+        appearance: appearance,
       };
       
-      console.log("📝 Salvando perfil com custom_photo_url:", customPhotoUrl);
+      console.log("📝 Salvando perfil com appearance:", appearance);
       
       const updateResponse = await fetch("/api/user/update", {
         method: "POST",
@@ -233,15 +185,15 @@ function ContaPageContent() {
 
       const updateResult = await updateResponse.json();
       console.log("✅ Perfil atualizado:", updateResult);
-      
-      // Atualizar estado imediatamente com a URL retornada
-      if (updateResult.custom_photo_url) {
-        setCustomPhotoUrl(updateResult.custom_photo_url);
-        setPhotoPreview(updateResult.custom_photo_url);
-      }
 
-      // Recarregar dados para garantir que a foto aparece
+      // Recarregar dados
       await loadData();
+      
+      // Atualizar aparência no ThemeProvider imediatamente
+      if (appearance) {
+        setThemeAppearance(appearance);
+      }
+      
       setSuccessModal({
         isOpen: true,
         message: "Perfil atualizado com sucesso!",
@@ -307,12 +259,6 @@ function ContaPageContent() {
 
   async function handleCancelSubscription() {
     if (!user) return;
-    
-    const confirmed = window.confirm(
-      "Tem certeza que deseja cancelar sua assinatura? Seu plano será alterado para Free e você perderá os benefícios do plano atual."
-    );
-    
-    if (!confirmed) return;
 
     try {
       const token = await user.getIdToken();
@@ -325,13 +271,15 @@ function ContaPageContent() {
       });
 
       if (response.ok) {
+        setCancelModal({ isOpen: false }); // Fechar modal de cancelamento
         await loadData();
         setSuccessModal({
           isOpen: true,
-          message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free.",
+          message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free e você não será mais cobrado.",
         });
       } else {
         const errorData = await response.json();
+        setCancelModal({ isOpen: false }); // Fechar modal mesmo em caso de erro
         setErrorModal({
           isOpen: true,
           message: errorData.error || "Erro ao cancelar assinatura",
@@ -339,6 +287,7 @@ function ContaPageContent() {
       }
     } catch (error: any) {
       console.error("Erro ao cancelar assinatura:", error);
+      setCancelModal({ isOpen: false }); // Fechar modal mesmo em caso de erro
       setErrorModal({
         isOpen: true,
         message: error.message || "Erro ao cancelar assinatura",
@@ -377,50 +326,6 @@ function ContaPageContent() {
             Perfil
           </h2>
           <div className="space-y-4">
-            {/* Foto de Perfil */}
-            <div>
-              <label className="block mb-2 font-medium">Foto de Perfil</label>
-              {(photoPreview || customPhotoUrl) ? (
-                <div className="relative inline-block">
-                  <img
-                    src={photoPreview || customPhotoUrl || ""}
-                    alt="Preview"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-blush/20"
-                    onError={(e) => {
-                      console.error("Erro ao carregar imagem:", e);
-                      setPhotoPreview(null);
-                      setCustomPhotoUrl(null);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={removePhoto}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  {...getRootPropsPhoto()}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors w-24 h-24 flex items-center justify-center ${
-                    isDragActivePhoto
-                      ? "border-primary bg-primary/10"
-                      : "border-blush/30 hover:border-primary"
-                  }`}
-                >
-                  <input {...getInputPropsPhoto()} />
-                  {uploadingPhoto ? (
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Upload className="w-6 h-6 text-foreground/40" />
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-foreground/60 mt-2">
-                Esta foto será exibida nos seus catálogos públicos
-              </p>
-            </div>
             <div>
               <label className="block mb-2 font-medium">Nome da Loja</label>
               <Input
@@ -526,7 +431,7 @@ function ContaPageContent() {
           <h2 className="text-2xl font-display font-semibold mb-6">
             Tema e Aparência
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="block mb-2 font-medium">Tema</label>
               <p className="text-sm text-foreground/60 mb-4">
@@ -537,6 +442,48 @@ function ContaPageContent() {
               </div>
               <p className="text-xs text-foreground/50 mt-3">
                 <strong>Nota:</strong> A página inicial do site (landing page) sempre seguirá a preferência do seu sistema operacional.
+              </p>
+            </div>
+            
+            <div>
+              <label className="block mb-2 font-medium">Aparência</label>
+              <p className="text-sm text-foreground/60 mb-4">
+                Escolha a paleta de cores principal do seu perfil e catálogos públicos.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppearance("feminine");
+                    setThemeAppearance("feminine");
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                    appearance === "feminine"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-blush/30 bg-background hover:border-primary/50"
+                  }`}
+                >
+                  <span className="text-lg">🌸</span>
+                  <span>Feminino</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppearance("masculine");
+                    setThemeAppearance("masculine");
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                    appearance === "masculine"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-blush/30 bg-background hover:border-primary/50"
+                  }`}
+                >
+                  <span className="text-lg">🔵</span>
+                  <span>Masculino</span>
+                </button>
+              </div>
+              <p className="text-xs text-foreground/50 mt-3">
+                <strong>Feminino:</strong> Paleta rosa • <strong>Masculino:</strong> Paleta azul
               </p>
             </div>
           </div>
@@ -593,7 +540,7 @@ function ContaPageContent() {
                       </Button>
                       {key !== "free" && (
                         <Button
-                          onClick={handleCancelSubscription}
+                          onClick={() => setCancelModal({ isOpen: true })}
                           variant="outline"
                           className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
@@ -647,6 +594,18 @@ function ContaPageContent() {
         confirmText="OK"
         showCancel={false}
         variant="default"
+      />
+
+      {/* Modal de cancelamento de assinatura */}
+      <Modal
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false })}
+        onConfirm={handleCancelSubscription}
+        title="Cancelar Assinatura"
+        message="Tem certeza que deseja cancelar sua assinatura? Seu plano será alterado para Free e você perderá os benefícios do plano atual. Você não será mais cobrado."
+        confirmText="Sim, cancelar"
+        cancelText="Não, manter plano"
+        variant="danger"
       />
       </DashboardLayout>
     </ThemeProvider>

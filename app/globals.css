@@ -4,14 +4,21 @@
 @tailwind utilities;
 
 :root {
-  /* Tema Light (padrão) */
+  /* Cores Femininas (Rosa) - Padrão */
   --blush: #E8A4B8; /* Rosa mais escuro para melhor legibilidade */
   --peach: #FFD7B5;
   --lavender: #9F8DAF;
+  
+  /* Cores Masculinas (Azul) */
+  --blue-primary: #4A90E2; /* Azul principal */
+  --blue-secondary: #6BA3D8; /* Azul secundário */
+  --blue-accent: #5B7FA6; /* Azul accent */
+  
   --background: #FFFFFF;
   --background-alt: #FCFBFB;
   --foreground: #222222;
   
+  /* Aparência padrão: feminina (rosa) */
   --primary: var(--blush);
   --secondary: var(--peach);
   --accent: var(--lavender);
@@ -20,8 +27,23 @@
   --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
-/* Tema Dark/Feminino */
-[data-theme="dark"] {
+/* Aparência Masculina (Azul) */
+[data-appearance="masculine"] {
+  --primary: var(--blue-primary);
+  --secondary: var(--blue-secondary);
+  --accent: var(--blue-accent);
+}
+
+/* Aparência Feminina (Rosa) */
+[data-appearance="feminine"] {
+  --primary: var(--blush);
+  --secondary: var(--peach);
+  --accent: var(--lavender);
+}
+
+/* Tema Dark - Feminino */
+[data-theme="dark"][data-appearance="feminine"],
+[data-theme="dark"]:not([data-appearance="masculine"]) {
   --blush: #E8A4B8; /* Rosa mantido */
   --peach: #D4A5C7; /* Pêssego mais escuro/roxo */
   --lavender: #B19CD9; /* Lavanda mais vibrante */
@@ -34,9 +56,23 @@
   --accent: var(--lavender);
 }
 
-/* Detecção de preferência do sistema */
+/* Tema Dark - Masculino */
+[data-theme="dark"][data-appearance="masculine"] {
+  --blue-primary: #5BA3F0; /* Azul mais claro para dark mode */
+  --blue-secondary: #7BB3E8;
+  --blue-accent: #6C9BC4;
+  --background: #0A0A0F; /* Preto profundo */
+  --background-alt: #1A1A24; /* Cinza escuro */
+  --foreground: #F5F5F5; /* Texto claro */
+  
+  --primary: var(--blue-primary);
+  --secondary: var(--blue-secondary);
+  --accent: var(--blue-accent);
+}
+
+/* Detecção de preferência do sistema - Feminino */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-appearance="masculine"]) {
     --blush: #E8A4B8;
     --peach: #D4A5C7;
     --lavender: #B19CD9;
@@ -47,6 +83,20 @@
     --primary: var(--blush);
     --secondary: var(--peach);
     --accent: var(--lavender);
+  }
+  
+  /* Detecção de preferência do sistema - Masculino */
+  :root:not([data-theme="light"])[data-appearance="masculine"] {
+    --blue-primary: #5BA3F0;
+    --blue-secondary: #7BB3E8;
+    --blue-accent: #6C9BC4;
+    --background: #0A0A0F;
+    --background-alt: #1A1A24;
+    --foreground: #F5F5F5;
+    
+    --primary: var(--blue-primary);
+    --secondary: var(--blue-secondary);
+    --accent: var(--blue-accent);
   }
 }
 
@@ -85,10 +135,10 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--blush);
+  background: var(--primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--lavender);
+  background: var(--accent);
 }

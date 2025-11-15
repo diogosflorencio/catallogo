@@ -14,6 +14,7 @@ export interface UserProfile {
   whatsapp_number: string | null;
   mensagem_template: string;
   theme: "light" | "dark" | null; // Tema preferido do usuário (null = usar preferência do sistema)
+  appearance: "feminine" | "masculine" | null; // Aparência: feminino (rosa) ou masculino (azul)
   created_at: string;
   last_active_at: string | null;
 }
