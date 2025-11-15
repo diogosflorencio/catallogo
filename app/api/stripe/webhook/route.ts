@@ -38,24 +38,31 @@ export async function POST(request: NextRequest) {
         const plan = session.metadata?.plan;
 
         if (userId && plan) {
+          console.log(`✅ [Webhook] Checkout completado - Usuário: ${userId}, Plano: ${plan}`);
           await updateUserProfile(userId, {
             plano: plan as "free" | "pro" | "premium",
           });
+        } else {
+          console.warn("⚠️ [Webhook] Checkout completado mas metadata incompleta:", { userId, plan });
         }
         break;
       }
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        // Atualizar plano baseado na subscription
-        // Implementar lógica de atualização
+        // Se a subscription foi atualizada (mudança de plano, etc)
+        // Por enquanto, mantemos o plano baseado no metadata do checkout
+        // Em uma implementação completa, você poderia mapear price_id -> plano
+        console.log(`ℹ️ [Webhook] Subscription atualizada: ${subscription.id}`);
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        // Downgrade para free
-        // Implementar lógica de downgrade
+        // Quando a subscription é cancelada, fazer downgrade para free
+        // Nota: O customer_id precisa estar armazenado no perfil do usuário
+        // Por enquanto, o cancelamento é feito manualmente via /api/stripe/cancel
+        console.log(`ℹ️ [Webhook] Subscription deletada: ${subscription.id}`);
         break;
       }
 

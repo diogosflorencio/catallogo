@@ -257,6 +257,56 @@ function ContaPageContent() {
     }
   }
 
+  async function handleAppearanceChange(newAppearance: "feminine" | "masculine") {
+    if (!user) return;
+    
+    // Guardar aparência anterior para possível reversão
+    const previousAppearance = appearance;
+    
+    // Atualizar estado local e ThemeProvider imediatamente
+    setAppearance(newAppearance);
+    setThemeAppearance(newAppearance);
+    
+    // Salvar no banco de dados
+    try {
+      const token = await user.getIdToken();
+      const updateResponse = await fetch("/api/user/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          data: {
+            appearance: newAppearance,
+          },
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        console.error("Erro ao salvar aparência:", await updateResponse.text());
+        // Reverter estado em caso de erro
+        setAppearance(previousAppearance);
+        setThemeAppearance(previousAppearance);
+        setErrorModal({
+          isOpen: true,
+          message: "Erro ao salvar aparência. Tente novamente.",
+        });
+      } else {
+        console.log("✅ Aparência salva com sucesso:", newAppearance);
+      }
+    } catch (error: any) {
+      console.error("Erro ao salvar aparência:", error);
+      // Reverter estado em caso de erro
+      setAppearance(previousAppearance);
+      setThemeAppearance(previousAppearance);
+      setErrorModal({
+        isOpen: true,
+        message: "Erro ao salvar aparência. Tente novamente.",
+      });
+    }
+  }
+
   async function handleCancelSubscription() {
     if (!user) return;
 
@@ -453,10 +503,7 @@ function ContaPageContent() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAppearance("feminine");
-                    setThemeAppearance("feminine");
-                  }}
+                  onClick={() => handleAppearanceChange("feminine")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
                     appearance === "feminine"
                       ? "border-primary bg-primary/10 text-foreground"
@@ -468,10 +515,7 @@ function ContaPageContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setAppearance("masculine");
-                    setThemeAppearance("masculine");
-                  }}
+                  onClick={() => handleAppearanceChange("masculine")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
                     appearance === "masculine"
                       ? "border-primary bg-primary/10 text-foreground"
