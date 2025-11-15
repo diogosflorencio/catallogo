@@ -58,19 +58,23 @@ export default function PublicProfilePage() {
       <header className="border-b border-blush/20 bg-background-alt/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            {user.custom_photo_url && (
+            {user.custom_photo_url ? (
               <img
                 src={user.custom_photo_url}
                 alt={user.nome_loja || user.username || ""}
                 className="w-16 h-16 rounded-full object-cover"
+                onError={(e) => {
+                  console.error("Erro ao carregar imagem de perfil:", user.custom_photo_url);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
-            )}
+            ) : null}
             <div>
               <h1 className="font-display font-semibold text-2xl">
                 {user.nome_loja || user.username}
               </h1>
-              {user.display_name && (
-                <p className="text-sm text-foreground/60">{user.display_name}</p>
+              {user.username && (
+                <p className="text-sm text-foreground/60">@{user.username}</p>
               )}
             </div>
           </div>

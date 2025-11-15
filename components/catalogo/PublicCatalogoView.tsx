@@ -67,13 +67,17 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
       <header className="border-b border-blush/20 bg-background-alt/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            {user.custom_photo_url && (
+            {user.custom_photo_url ? (
               <img
                 src={user.custom_photo_url}
                 alt={user.nome_loja || ""}
                 className="w-12 h-12 rounded-full object-cover"
+                onError={(e) => {
+                  console.error("Erro ao carregar imagem de perfil:", user.custom_photo_url);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
-            )}
+            ) : null}
             <div>
               <h1 className="font-display font-semibold text-lg">
                 {user.nome_loja || user.username}

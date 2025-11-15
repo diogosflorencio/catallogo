@@ -212,7 +212,7 @@ function ContaPageContent() {
             nome_loja: formData.nomeLoja,
             whatsapp_number: formData.whatsappNumber,
             mensagem_template: formData.mensagemTemplate,
-            custom_photo_url: customPhotoUrl,
+            custom_photo_url: customPhotoUrl || null,
           },
         }),
       });
@@ -285,6 +285,47 @@ function ContaPageContent() {
     }
   }
 
+  async function handleCancelSubscription() {
+    if (!user) return;
+    
+    const confirmed = window.confirm(
+      "Tem certeza que deseja cancelar sua assinatura? Seu plano será alterado para Free e você perderá os benefícios do plano atual."
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/stripe/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        await loadData();
+        setSuccessModal({
+          isOpen: true,
+          message: "Assinatura cancelada com sucesso. Seu plano foi alterado para Free.",
+        });
+      } else {
+        const errorData = await response.json();
+        setErrorModal({
+          isOpen: true,
+          message: errorData.error || "Erro ao cancelar assinatura",
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao cancelar assinatura:", error);
+      setErrorModal({
+        isOpen: true,
+        message: error.message || "Erro ao cancelar assinatura",
+      });
+    }
+  }
+
   async function handleSignOut() {
     await signOut();
     router.push("/");
@@ -319,12 +360,17 @@ function ContaPageContent() {
             {/* Foto de Perfil */}
             <div>
               <label className="block mb-2 font-medium">Foto de Perfil</label>
-              {photoPreview ? (
+              {(photoPreview || customPhotoUrl) ? (
                 <div className="relative inline-block">
                   <img
-                    src={photoPreview}
+                    src={photoPreview || customPhotoUrl || ""}
                     alt="Preview"
                     className="w-24 h-24 rounded-full object-cover border-2 border-blush/20"
+                    onError={(e) => {
+                      console.error("Erro ao carregar imagem:", e);
+                      setPhotoPreview(null);
+                      setCustomPhotoUrl(null);
+                    }}
                   />
                   <button
                     type="button"
@@ -521,9 +567,20 @@ function ContaPageContent() {
                     ))}
                   </ul>
                   {isCurrent ? (
-                    <Button variant="outline" disabled className="w-full">
-                      Plano Atual
-                    </Button>
+                    <>
+                      <Button variant="outline" disabled className="w-full mb-2">
+                        Plano Atual
+                      </Button>
+                      {key !== "free" && (
+                        <Button
+                          onClick={handleCancelSubscription}
+                          variant="outline"
+                          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          Cancelar Assinatura
+                        </Button>
+                      )}
+                    </>
                   ) : isUpgrade ? (
                     <Button
                       onClick={() => handleUpgrade(key as PlanType)}
@@ -531,11 +588,7 @@ function ContaPageContent() {
                     >
                       Assinar
                     </Button>
-                  ) : (
-                    <Button variant="outline" disabled className="w-full">
-                      Downgrade
-                    </Button>
-                  )}
+                  ) : null}
                 </div>
               );
             })}

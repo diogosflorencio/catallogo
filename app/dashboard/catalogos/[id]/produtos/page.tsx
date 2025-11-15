@@ -229,7 +229,7 @@ export default function ProdutosPage({
                       className={`text-xs px-2 py-1 rounded font-medium ml-2 flex-shrink-0 ${
                         produto.visivel
                           ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
                       }`}
                     >
                       {produto.visivel ? "✓ Visível" : "🔒 Oculto"}

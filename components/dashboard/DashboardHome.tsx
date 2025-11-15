@@ -3,7 +3,7 @@
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { ExternalLink, Copy, Check } from "lucide-react";
+import { ExternalLink, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -18,6 +18,7 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
   const [produtosCount, setProdutosCount] = useState<Record<string, number>>({});
   const [baseUrl, setBaseUrl] = useState("");
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [linksExpanded, setLinksExpanded] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -108,34 +109,26 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
             className="bg-background-alt rounded-xl p-6"
           >
             <h2 className="text-sm text-foreground/60 mb-3">Seus Links</h2>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="space-y-2">
               {/* Link do perfil */}
-              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-foreground/60 mb-1">Você pode compartilhar todos os seus catálogos:</p>
-                  <p className="text-xs font-mono text-foreground/80 break-all">
-                    {baseUrl || 'carregando...'}/{profile.username}
-                  </p>
-                  {catalogos.length > 0 && (
-                    <>
-                      <p className="text-xs text-foreground/60 mt-2 mb-1">Ou catálogos específicos:</p>
-                      {catalogos.slice(0, 2).map((catalogo) => (
-                        <div key={catalogo.id} className="mb-1 last:mb-0">
-                          <p className="text-xs font-mono text-foreground/80 break-all">
-                            {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
-                          </p>
-                        </div>
-                      ))}
-                      {catalogos.length > 2 && (
-                        <p className="text-xs text-foreground/50 mt-1">+{catalogos.length - 2} mais...</p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="ml-2 flex flex-col gap-1 flex-shrink-0">
+              <div className="p-3 bg-background rounded-lg border border-blush/20">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground mb-1.5">
+                      Você pode compartilhar todos os seus catálogos:
+                    </p>
+                    <a
+                      href={`${baseUrl}/${profile.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-primary hover:underline break-all block"
+                    >
+                      {baseUrl || 'carregando...'}/{profile.username}
+                    </a>
+                  </div>
                   <button
                     onClick={() => copyToClipboard(`${baseUrl}/${profile.username}`)}
-                    className="p-1.5 hover:bg-background-alt rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
                     title="Copiar link do perfil"
                   >
                     {copiedLink === `${baseUrl}/${profile.username}` ? (
@@ -144,22 +137,64 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                       <Copy className="w-4 h-4 text-foreground/60" />
                     )}
                   </button>
-                  {catalogos.slice(0, 2).map((catalogo) => (
-                    <button
-                      key={catalogo.id}
-                      onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
-                      className="p-1.5 hover:bg-background-alt rounded-lg transition-colors"
-                      title="Copiar link do catálogo"
-                    >
-                      {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Copy className="w-4 h-4 text-foreground/60" />
-                      )}
-                    </button>
-                  ))}
                 </div>
               </div>
+
+              {/* Links dos catálogos */}
+              {catalogos.length > 0 && (
+                <div className="p-3 bg-background rounded-lg border border-blush/20">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground mb-1.5">
+                        Ou catálogos específicos:
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`space-y-1.5 transition-all ${linksExpanded ? '' : 'max-h-[20px] overflow-hidden'}`}>
+                    {catalogos.map((catalogo) => (
+                      <div key={catalogo.id} className="flex items-center justify-between gap-2">
+                        <a
+                          href={`${baseUrl}/${profile.username}/${catalogo.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
+                        >
+                          {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
+                        </a>
+                        <button
+                          onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
+                          className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
+                          title="Copiar link do catálogo"
+                        >
+                          {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-foreground/60" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {catalogos.length > 1 && (
+                    <button
+                      onClick={() => setLinksExpanded(!linksExpanded)}
+                      className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      {linksExpanded ? (
+                        <>
+                          <ChevronUp className="w-3 h-3" />
+                          Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3 h-3" />
+                          Ver todos ({catalogos.length})
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
