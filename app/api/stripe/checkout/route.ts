@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       },
       // No modo "subscription", o Stripe cria o customer automaticamente
       // Configurações adicionais para melhor compatibilidade
-      billing_address_collection: "auto",
+      // billing_address_collection: "auto", // Comentado temporariamente para debug
       allow_promotion_codes: false,
     });
 
@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       type: error.type,
       code: error.code,
       statusCode: error.statusCode,
+      raw: error.raw, // Detalhes completos do erro do Stripe
     });
     
     // Mensagem de erro mais amigável
