@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { checkUsernameExists } from "@/lib/supabase/database";
-import { UserProfile, Catalogo } from "@/lib/supabase/database";
+import { UserProfile } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,7 +19,7 @@ import { formatPrice } from "@/lib/utils";
 import { signOut } from "@/lib/firebase/auth-simple";
 import { uploadImage } from "@/lib/storage/upload";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, Copy, Check } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import Link from "next/link";
 
 function ContaPageContent() {
@@ -43,8 +43,6 @@ function ContaPageContent() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
-  const [catalogos, setCatalogos] = useState<Catalogo[]>([]);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   useEffect(() => {
     // Exigir login
@@ -77,23 +75,16 @@ function ContaPageContent() {
     
     setLoading(true);
     try {
-      // Buscar perfil e catálogos via API route
+      // Buscar perfil via API route
       const token = await user.getIdToken();
-      const [profileResponse, catalogosResponse] = await Promise.all([
-        fetch("/api/user/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-        fetch("/api/catalogos", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-      ]);
+      const response = await fetch("/api/user/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      if (profileResponse.ok) {
-        const userProfile = await profileResponse.json();
+      if (response.ok) {
+        const userProfile = await response.json();
         setProfile(userProfile);
         setCustomPhotoUrl(userProfile.custom_photo_url || null);
         setPhotoPreview(userProfile.custom_photo_url || null);
@@ -104,12 +95,7 @@ function ContaPageContent() {
           mensagemTemplate: userProfile.mensagem_template || "",
         });
       } else {
-        console.error("Erro ao buscar perfil:", await profileResponse.text());
-      }
-
-      if (catalogosResponse.ok) {
-        const cats = await catalogosResponse.json();
-        setCatalogos(cats);
+        console.error("Erro ao buscar perfil:", await response.text());
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -302,12 +288,6 @@ function ContaPageContent() {
   async function handleSignOut() {
     await signOut();
     router.push("/");
-  }
-
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-    setCopiedLink(text);
-    setTimeout(() => setCopiedLink(null), 2000);
   }
 
   if (authLoading || loading) {
@@ -561,76 +541,6 @@ function ContaPageContent() {
             })}
           </div>
         </motion.div>
-
-        {/* Links */}
-        {profile?.username && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="bg-background-alt rounded-xl p-6"
-          >
-            <h2 className="text-2xl font-display font-semibold mb-4">
-              Seus Links
-            </h2>
-            <p className="text-sm text-foreground/60 mb-4">
-              Copie clicando no ícone ao lado deles
-            </p>
-            
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {/* Link do perfil */}
-              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-foreground/60 mb-1">Você pode compartilhar todos os seus catálogos:</p>
-                  <p className="text-sm font-mono text-foreground/80 break-all">
-                    https://catallogo.vercel.app/{profile.username}
-                  </p>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(`https://catallogo.vercel.app/${profile.username}`)}
-                  className="ml-3 p-2 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                  title="Copiar link"
-                >
-                  {copiedLink === `https://catallogo.vercel.app/${profile.username}` ? (
-                    <Check className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <Copy className="w-5 h-5 text-foreground/60" />
-                  )}
-                </button>
-              </div>
-
-              {/* Links dos catálogos */}
-              {catalogos.length > 0 && (
-                <>
-                  <p className="text-xs text-foreground/60 mb-2">Ou catálogos específicos:</p>
-                  {catalogos.map((catalogo) => (
-                    <div
-                      key={catalogo.id}
-                      className="flex items-center justify-between p-3 bg-background rounded-lg border border-blush/20"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-mono text-foreground/80 break-all">
-                          https://catallogo.vercel.app/{profile.username}/{catalogo.slug}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(`https://catallogo.vercel.app/${profile.username}/${catalogo.slug}`)}
-                        className="ml-3 p-2 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                        title="Copiar link"
-                      >
-                        {copiedLink === `https://catallogo.vercel.app/${profile.username}/${catalogo.slug}` ? (
-                          <Check className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <Copy className="w-5 h-5 text-foreground/60" />
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
 
         {/* Sair  */}
         <motion.div

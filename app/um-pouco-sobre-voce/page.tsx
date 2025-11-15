@@ -327,7 +327,7 @@ export default function UmPoucoSobreVocePage() {
                 <p className="text-sm text-red-500 mb-2">{usernameError}</p>
               )}
               <p className="text-sm text-foreground/60 mb-4">
-                Seu link será: catallogo.web.app/{formData.username || "username"}
+                Seu link será: {typeof window !== "undefined" ? window.location.origin : ""}/{formData.username || "username"}
               </p>
             </motion.div>
           )}
