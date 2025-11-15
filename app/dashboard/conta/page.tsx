@@ -302,8 +302,9 @@ function ContaPageContent() {
   }
 
   return (
-    <DashboardLayout profile={profile}>
-      <div className="max-w-4xl mx-auto space-y-8">
+    <ThemeProvider userProfile={profile} isLandingPage={false}>
+      <DashboardLayout profile={profile}>
+        <div className="max-w-4xl mx-auto space-y-8">
         {/* Perfil */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -314,6 +315,45 @@ function ContaPageContent() {
             Perfil
           </h2>
           <div className="space-y-4">
+            {/* Foto de Perfil */}
+            <div>
+              <label className="block mb-2 font-medium">Foto de Perfil</label>
+              {photoPreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-blush/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  {...getRootPropsPhoto()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors w-24 h-24 flex items-center justify-center ${
+                    isDragActivePhoto
+                      ? "border-primary bg-primary/10"
+                      : "border-blush/30 hover:border-primary"
+                  }`}
+                >
+                  <input {...getInputPropsPhoto()} />
+                  {uploadingPhoto ? (
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Upload className="w-6 h-6 text-foreground/40" />
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-foreground/60 mt-2">
+                Esta foto será exibida nos seus catálogos públicos
+              </p>
+            </div>
             <div>
               <label className="block mb-2 font-medium">Nome da Loja</label>
               <Input
@@ -421,23 +461,16 @@ function ContaPageContent() {
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block mb-2 font-medium">Tema do Site</label>
+              <label className="block mb-2 font-medium">Tema</label>
               <p className="text-sm text-foreground/60 mb-4">
-                Escolha entre o tema claro ou o tema escuro/feminino. O tema escuro usa preto, cinza, roxo e rosa para uma experiência elegante.
+                O tema escolhido será aplicado ao seu dashboard e aos seus catálogos públicos compartilhados.
               </p>
-              <div className="flex gap-3">
-                <div className="flex-1 p-4 rounded-lg border-2 border-primary bg-primary/10">
-                  <p className="font-semibold mb-1">Tema Claro</p>
-                  <p className="text-xs text-foreground/60">Suave e feminino</p>
-                </div>
-                <div className="flex-1 p-4 rounded-lg border-2 border-lavender bg-lavender/10">
-                  <p className="font-semibold mb-1">Tema Escuro/Feminino</p>
-                  <p className="text-xs text-foreground/60">Preto, cinza, roxo e rosa</p>
-                </div>
-              </div>
               <div className="mt-4">
                 <ThemeToggle />
               </div>
+              <p className="text-xs text-foreground/50 mt-3">
+                <strong>Nota:</strong> A página inicial do site (landing page) sempre seguirá a preferência do seu sistema operacional.
+              </p>
             </div>
           </div>
         </motion.div>
@@ -541,7 +574,9 @@ function ContaPageContent() {
         showCancel={false}
         variant="default"
       />
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+    </ThemeProvider>
   );
 }
 

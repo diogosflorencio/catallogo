@@ -349,6 +349,9 @@ export default function EditarProdutoPage({
                     <p className="text-xs text-foreground/50">
                       PNG, JPG, WEBP até 10MB cada • Máximo 3 imagens
                     </p>
+                    <p className="text-xs text-primary font-medium mt-2">
+                      💡 Recomendamos imagens quadradas para melhor visualização
+                    </p>
                   </>
                 )}
               </div>

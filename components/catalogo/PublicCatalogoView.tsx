@@ -115,7 +115,7 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
                   onClick={() => handleProductClick(produto)}
                 >
                   {primeiraImagem && (
-                    <div className="w-full h-40 relative overflow-hidden bg-background-alt">
+                    <div className="w-full aspect-square relative overflow-hidden bg-background-alt">
                       <img
                         src={primeiraImagem}
                         alt={produto.nome}

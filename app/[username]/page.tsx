@@ -1,41 +1,66 @@
-import { getUidByUsername, getCatalogos, getUserProfile } from "@/lib/supabase/database";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { UserProfile, Catalogo } from "@/lib/supabase/database";
+import { Loading } from "@/components/ui/Loading";
 
-interface PageProps {
-  params: Promise<{
-    username: string;
-  }>;
-}
+export default function PublicProfilePage() {
+  const params = useParams();
+  const username = params?.username as string;
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [catalogos, setCatalogos] = useState<Catalogo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function PublicProfilePage({ params }: PageProps) {
-  const { username } = await params;
-  
-  // Buscar usuário pelo username
-  const userId = await getUidByUsername(username);
-  if (!userId) {
-    notFound();
+  useEffect(() => {
+    if (!username) return;
+    
+    async function loadData() {
+      try {
+        const response = await fetch(`/api/public/user/${username}`);
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+          setCatalogos(data.catalogos.filter((c: Catalogo) => c.public));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, [username]);
+
+  if (loading) {
+    return <Loading message="Carregando perfil..." fullScreen />;
   }
 
-  // Buscar perfil e catálogos públicos
-  const user = await getUserProfile(userId);
   if (!user) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-foreground/70 mb-4">Perfil não encontrado</p>
+          <Link href="/" className="text-primary hover:underline">Voltar para home</Link>
+        </div>
+      </div>
+    );
   }
-
-  const catalogos = await getCatalogos(userId);
-  const catalogosPublicos = catalogos.filter((c) => c.public);
 
   return (
-    <div className="min-h-screen bg-background">
+    <ThemeProvider userProfile={user} isLandingPage={false}>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-blush/20 bg-background-alt/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            {user.photo_url && (
+            {(user.custom_photo_url || user.photo_url) && (
               <img
-                src={user.photo_url}
+                src={user.custom_photo_url || user.photo_url || ""}
                 alt={user.nome_loja || user.username || ""}
                 className="w-16 h-16 rounded-full object-cover"
               />
@@ -101,35 +126,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
           <p>Powered by Catallogo</p>
         </div>
       </footer>
-    </div>
+      </div>
+    </ThemeProvider>
   );
-}
-
-export async function generateMetadata({ params }: PageProps) {
-  const { username } = await params;
-  const userId = await getUidByUsername(username);
-  
-  if (!userId) {
-    return {
-      title: "Perfil não encontrado",
-    };
-  }
-
-  const user = await getUserProfile(userId);
-  if (!user) {
-    return {
-      title: "Perfil não encontrado",
-    };
-  }
-
-  return {
-    title: `${user.nome_loja || user.username} - Catálogos`,
-    description: `Catálogos de produtos de ${user.nome_loja || user.username}`,
-    openGraph: {
-      title: `${user.nome_loja || user.username} - Catálogos`,
-      description: `Catálogos de produtos de ${user.nome_loja || user.username}`,
-      images: user.photo_url ? [user.photo_url] : [],
-    },
-  };
 }
 

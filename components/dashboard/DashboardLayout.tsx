@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { signOut } from "@/lib/firebase/auth";
 import { UserProfile } from "@/lib/supabase/database";
-import { Home, ShoppingBag, User, LogOut } from "lucide-react";
+import { Home, ShoppingBag, User, LogOut, BookOpen } from "lucide-react";
 // BarChart3 importado mas não usado (estatísticas ocultas temporariamente)
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ export function DashboardLayout({
   const navItems = [
     { href: `/dashboard`, icon: Home, label: "Home" },
     { href: `/dashboard/catalogos`, icon: ShoppingBag, label: "Catálogos" },
+    { href: `/dashboard/tutorial`, icon: BookOpen, label: "Tutorial" },
     // Estatísticas temporariamente ocultas - será implementado no futuro
     // { href: `/dashboard/estatisticas`, icon: BarChart3, label: "Estatísticas" },
     { href: `/dashboard/conta`, icon: User, label: "Conta" },

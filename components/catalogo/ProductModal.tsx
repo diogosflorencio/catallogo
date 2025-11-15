@@ -117,17 +117,17 @@ export function ProductModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto pointer-events-auto"
+              className="bg-background rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-blush/20 p-4 flex items-start justify-between z-10">
-                <div className="flex-1">
-                  <h2 className="font-display font-semibold text-xl mb-1">
+              <div className="flex-shrink-0 bg-background/95 backdrop-blur-sm border-b border-blush/20 p-3 flex items-start justify-between z-10">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display font-semibold text-lg mb-1 truncate">
                     {produto.nome}
                   </h2>
                   {produto.preco && (
-                    <p className="text-primary font-semibold text-lg">
+                    <p className="text-primary font-semibold text-base">
                       {formatPrice(Number(produto.preco))}
                     </p>
                   )}
@@ -151,10 +151,10 @@ export function ProductModal({
               </div>
 
               {/* Content */}
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-2 flex-1 overflow-y-auto min-h-0">
                 {/* Image Carousel */}
                 {imagens.length > 0 && (
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-background-alt">
+                  <div className="relative w-full max-w-[280px] mx-auto aspect-square rounded-lg overflow-hidden bg-background-alt flex-shrink-0">
                     {!imageLoaded && (
                       <div className="absolute inset-0 flex items-center justify-center z-10">
                         <div className="animate-pulse bg-blush/20 w-full h-full" />
@@ -224,8 +224,8 @@ export function ProductModal({
 
                 {/* Price - destacado se não tiver descrição */}
                 {produto.preco && !produto.descricao && (
-                  <div className="text-center py-4">
-                    <p className="text-3xl font-bold text-primary">
+                  <div className="text-center py-2">
+                    <p className="text-2xl font-bold text-primary">
                       {formatPrice(Number(produto.preco))}
                     </p>
                   </div>
@@ -233,14 +233,14 @@ export function ProductModal({
 
                 {/* Description */}
                 {produto.descricao && (
-                  <div className="bg-background-alt/50 rounded-lg p-4">
-                    <h3 className="font-semibold mb-2 text-foreground">Descrição</h3>
-                    <p className="text-foreground/70 whitespace-pre-line leading-relaxed">
+                  <div className="bg-background-alt/50 rounded-lg p-3">
+                    <h3 className="font-semibold mb-1 text-sm text-foreground">Descrição</h3>
+                    <p className="text-sm text-foreground/70 whitespace-pre-line leading-relaxed line-clamp-4">
                       {produto.descricao}
                     </p>
                     {produto.preco && (
-                      <div className="mt-4 pt-4 border-t border-blush/20">
-                        <p className="text-2xl font-bold text-primary">
+                      <div className="mt-3 pt-3 border-t border-blush/20">
+                        <p className="text-xl font-bold text-primary">
                           {formatPrice(Number(produto.preco))}
                         </p>
                       </div>
@@ -249,23 +249,23 @@ export function ProductModal({
                 )}
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-blush/20">
+                <div className="flex flex-col gap-2 pt-2 border-t border-blush/20 flex-shrink-0">
                   {produto.link_externo && (
                     <a
                       href={produto.link_externo}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-foreground rounded-lg py-3 px-6 flex items-center justify-center gap-2 transition-colors font-medium"
+                      className="w-full bg-primary hover:bg-primary/90 text-foreground rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                     >
-                      <ExternalLink className="w-5 h-5" />
+                      <ExternalLink className="w-4 h-4" />
                       Ver Produto
                     </a>
                   )}
                   <button
                     onClick={handleWhatsAppClick}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-lg py-3 px-6 flex items-center justify-center gap-2 transition-colors font-medium"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg py-2.5 px-4 flex items-center justify-center gap-2 transition-colors font-medium text-sm"
                   >
-                    <MessageCircle className="w-5 h-5" />
+                    <MessageCircle className="w-4 h-4" />
                     Falar no WhatsApp
                   </button>
                 </div>

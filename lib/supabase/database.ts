@@ -13,6 +13,7 @@ export interface UserProfile {
   plano: "free" | "pro" | "premium";
   whatsapp_number: string | null;
   mensagem_template: string;
+  theme: "light" | "dark" | null; // Tema preferido do usuário (null = usar preferência do sistema)
   created_at: string;
   last_active_at: string | null;
 }

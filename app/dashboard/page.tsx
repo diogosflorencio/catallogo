@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
@@ -85,9 +86,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <DashboardLayout profile={profile}>
-      <DashboardHome catalogos={catalogos} profile={profile} />
-    </DashboardLayout>
+    <ThemeProvider userProfile={profile} isLandingPage={false}>
+      <DashboardLayout profile={profile}>
+        <DashboardHome catalogos={catalogos} profile={profile} />
+      </DashboardLayout>
+    </ThemeProvider>
   );
 }
 

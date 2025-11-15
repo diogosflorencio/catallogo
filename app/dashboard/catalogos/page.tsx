@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
@@ -158,8 +159,9 @@ export default function CatalogosPage() {
   }
 
   return (
-    <DashboardLayout profile={profile}>
-      <div>
+    <ThemeProvider userProfile={profile} isLandingPage={false}>
+      <DashboardLayout profile={profile}>
+        <div>
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-display font-semibold mb-2">
@@ -302,7 +304,9 @@ export default function CatalogosPage() {
         showCancel={false}
         variant="default"
       />
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+    </ThemeProvider>
   );
 }
 
