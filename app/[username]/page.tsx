@@ -121,7 +121,7 @@ export default function PublicProfilePage() {
             >
               Meus Catálogos
             </motion.h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {catalogos.map((catalogo, index) => (
                 <motion.div
                   key={catalogo.id}
@@ -134,18 +134,18 @@ export default function PublicProfilePage() {
                     href={`/${username}/${catalogo.slug}`}
                     className="block"
                   >
-                    <div className="p-2.5">
-                      <h3 className="font-display font-semibold text-xs mb-1.5 line-clamp-2 leading-tight text-foreground dark:text-foreground/90">
+                    <div className="p-4">
+                      <h3 className="font-display font-semibold text-sm mb-2 line-clamp-2 leading-tight text-foreground dark:text-foreground/90">
                         {catalogo.nome}
                       </h3>
                       {catalogo.descricao && (
-                        <p className="text-[10px] text-foreground/60 dark:text-foreground/50 mb-2.5 line-clamp-2 leading-tight">
+                        <p className="text-xs text-foreground/60 dark:text-foreground/50 mb-3 line-clamp-3 leading-tight">
                           {catalogo.descricao}
                         </p>
                       )}
-                      <div className="w-full bg-primary hover:bg-primary/90 text-white dark:text-foreground rounded-lg py-1.5 px-3 flex items-center justify-center gap-1.5 transition-colors text-[10px] font-medium">
-                        <ExternalLink className="w-3 h-3" />
-                        <span>Ver</span>
+                      <div className="w-full bg-primary hover:bg-primary/90 text-white dark:text-foreground rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-xs font-medium">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Ver Catálogo</span>
                       </div>
                     </div>
                   </Link>
