@@ -139,67 +139,64 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                   </button>
                 </div>
               </div>
+
+              {/* Links dos catálogos */}
+              {catalogos.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-foreground mb-1.5 px-1">
+                    Ou catálogos específicos:
+                  </p>
+                  <div className={`space-y-2 transition-all ${linksExpanded ? '' : 'max-h-[28px] overflow-hidden'}`}>
+                    {catalogos.map((catalogo) => (
+                      <div key={catalogo.id} className="p-3 bg-background rounded-lg border border-blush/20">
+                        <div className="flex items-center justify-between gap-2">
+                          <a
+                            href={`${baseUrl}/${profile.username}/${catalogo.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
+                          >
+                            {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
+                          </a>
+                          <button
+                            onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
+                            className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
+                            title="Copiar link do catálogo"
+                          >
+                            {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-foreground/60" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {catalogos.length > 0 && (
+                    <button
+                      onClick={() => setLinksExpanded(!linksExpanded)}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      {linksExpanded ? (
+                        <>
+                          <ChevronUp className="w-3 h-3" />
+                          Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3 h-3" />
+                          Ver todos ({catalogos.length})
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-            {/* Texto "Ou catálogos específicos:" dentro do card */}
-            {catalogos.length > 0 && (
-              <p className="text-xs font-semibold text-foreground mt-3 mb-0">
-                Ou catálogos específicos:
-              </p>
-            )}
           </motion.div>
         )}
       </div>
-
-      {/* Links dos catálogos fora do grid */}
-      {profile.username && catalogos.length > 0 && (
-        <div className="mb-8 space-y-2">
-          <div className={`space-y-2 transition-all ${linksExpanded ? '' : 'max-h-[28px] overflow-hidden'}`}>
-            {catalogos.map((catalogo) => (
-              <div key={catalogo.id} className="p-3 bg-background rounded-lg border border-blush/20">
-                <div className="flex items-center justify-between gap-2">
-                  <a
-                    href={`${baseUrl}/${profile.username}/${catalogo.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono text-primary hover:underline break-all flex-1 min-w-0"
-                  >
-                    {baseUrl || 'carregando...'}/{profile.username}/{catalogo.slug}
-                  </a>
-                  <button
-                    onClick={() => copyToClipboard(`${baseUrl}/${profile.username}/${catalogo.slug}`)}
-                    className="p-1.5 hover:bg-background-alt rounded-lg transition-colors flex-shrink-0"
-                    title="Copiar link do catálogo"
-                  >
-                    {copiedLink === `${baseUrl}/${profile.username}/${catalogo.slug}` ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-foreground/60" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {catalogos.length > 1 && (
-            <button
-              onClick={() => setLinksExpanded(!linksExpanded)}
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              {linksExpanded ? (
-                <>
-                  <ChevronUp className="w-3 h-3" />
-                  Ver menos
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3 h-3" />
-                  Ver todos ({catalogos.length})
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Catálogos */}
       <div className="mb-6">
