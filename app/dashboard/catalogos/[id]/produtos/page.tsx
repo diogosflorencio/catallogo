@@ -3,16 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import {
-  getCatalogo,
-  getProdutos,
-} from "@/lib/supabase/database";
 import { UserProfile, Catalogo, Produto } from "@/lib/supabase/database";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { Modal } from "@/components/ui/Modal";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
@@ -42,7 +38,6 @@ export default function ProdutosPage({
   }, [params]);
 
   useEffect(() => {
-    // Exigir login
     if (!authLoading && !user) {
       router.push("/perfil");
       return;
@@ -150,21 +145,22 @@ export default function ProdutosPage({
 
   return (
     <DashboardLayout profile={profile}>
-      <div>
-        <div className="mb-8 flex items-center justify-between">
+      <div className="pb-6">
+        {/* Header compacto */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-display font-semibold mb-2">
-              Produtos - {catalogo.nome}
+            <h2 className="text-2xl font-display font-semibold mb-1">
+              {catalogo.nome}
             </h2>
-            <p className="text-foreground/70">
-              {produtos.length} produto{produtos.length !== 1 ? "s" : ""} neste catálogo
-              {profile.plano === "free" && ` (limite: 3 por catálogo)`}
+            <p className="text-sm text-foreground/60">
+              {produtos.length} de {profile.plano === "free" ? "3" : "∞"} produto{produtos.length !== 1 ? "s" : ""}
             </p>
           </div>
           <Link href={`/dashboard/catalogos/${catalogoId}/produtos/novo`}>
             <Button
               disabled={profile.plano === "free" && produtos.length >= 3}
               title={profile.plano === "free" && produtos.length >= 3 ? "Limite de 3 produtos atingido no plano free" : ""}
+              className="w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2" />
               Novo Produto
@@ -172,33 +168,35 @@ export default function ProdutosPage({
           </Link>
         </div>
 
+        {/* Empty State */}
         {produtos.length === 0 ? (
-          <div className="bg-background-alt rounded-xl p-12 text-center">
-            <p className="text-foreground/60 mb-4">
+          <div className="bg-background-alt rounded-lg p-8 text-center">
+            <p className="text-foreground/60 mb-4 text-sm">
               Você ainda não tem produtos neste catálogo
             </p>
             <Link href={`/dashboard/catalogos/${catalogoId}/produtos/novo`}>
-              <Button>Adicionar primeiro produto</Button>
+              <Button size="sm">Adicionar primeiro produto</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {produtos.map((produto, index) => (
-              <motion.div
-                key={produto.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-background-alt rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-              >
-                {(() => {
-                  // Usar imagens_urls se existir, senão usar imagem_url
-                  const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
-                    ? produto.imagens_urls
-                    : (produto.imagem_url ? [produto.imagem_url] : []);
-                  
-                  return imagens.length > 0 ? (
-                    <div className="aspect-square relative overflow-hidden">
+          /* Grid de produtos - Mais compacto */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {produtos.map((produto, index) => {
+              const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
+                ? produto.imagens_urls
+                : (produto.imagem_url ? [produto.imagem_url] : []);
+              
+              return (
+                <motion.div
+                  key={produto.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-background-alt rounded-lg overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-foreground/5"
+                >
+                  {/* Imagem do produto - Compacta */}
+                  {imagens.length > 0 && (
+                    <div className="relative aspect-square overflow-hidden bg-foreground/5">
                       {imagens.length === 1 ? (
                         <img
                           src={imagens[0]}
@@ -206,68 +204,83 @@ export default function ProdutosPage({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="grid grid-cols-2 h-full">
+                        <div className="grid grid-cols-2 h-full gap-[1px]">
                           {imagens.slice(0, 4).map((img, idx) => (
                             <img
                               key={idx}
                               src={img}
-                              alt={`${produto.nome} - Imagem ${idx + 1}`}
+                              alt={`${produto.nome} - ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
                           ))}
                         </div>
                       )}
+                      
+                      {/* Badge de status sobre a imagem */}
+                      <div className="absolute top-2 right-2">
+                        {produto.visivel ? (
+                          <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-green-500/90 text-white font-medium backdrop-blur-sm">
+                            <Eye className="w-3 h-3" />
+                            Visível
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-500/90 text-white font-medium backdrop-blur-sm">
+                            <EyeOff className="w-3 h-3" />
+                            Oculto
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ) : null;
-                })()}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-display font-semibold text-lg flex-1">
+                  )}
+                  
+                  {/* Conteúdo compacto */}
+                  <div className="p-3">
+                    <h3 className="font-display font-semibold text-sm mb-1 line-clamp-2 leading-tight">
                       {produto.nome}
                     </h3>
-                    <span
-                      className={`text-xs px-2 py-1 rounded font-medium ml-2 flex-shrink-0 ${
-                        produto.visivel
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      {produto.visivel ? "✓ Visível" : "🔒 Oculto"}
-                    </span>
-                  </div>
-                  {produto.descricao && (
-                    <p className="text-sm text-foreground/60 mb-2 line-clamp-2">
-                      {produto.descricao}
-                    </p>
-                  )}
-                  {produto.preco && (
-                    <p className="font-semibold text-primary mb-4">
-                      {formatPrice(Number(produto.preco))}
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/dashboard/catalogos/${catalogoId}/produtos/${produto.id}/editar`}
-                      className="flex-1"
-                    >
-                      <Button variant="outline" className="w-full">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
+                    
+                    {produto.descricao && (
+                      <p className="text-xs text-foreground/50 mb-2 line-clamp-1">
+                        {produto.descricao}
+                      </p>
+                    )}
+                    
+                    {produto.preco && (
+                      <p className="font-bold text-primary mb-3 text-base">
+                        {formatPrice(Number(produto.preco))}
+                      </p>
+                    )}
+                    
+                    {/* Botões compactos */}
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/catalogos/${catalogoId}/produtos/${produto.id}/editar`}
+                        className="flex-1"
+                      >
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full text-xs h-8"
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Editar
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(produto.id)}
+                        disabled={deleting === produto.id}
+                        className="flex-1 text-xs h-8"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        {deleting === produto.id ? "..." : "Excluir"}
                       </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDeleteClick(produto.id)}
-                      disabled={deleting === produto.id}
-                      className="flex-1"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      {deleting === produto.id ? "Excluindo..." : "Excluir"}
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
 
@@ -297,4 +310,3 @@ export default function ProdutosPage({
     </DashboardLayout>
   );
 }
-
