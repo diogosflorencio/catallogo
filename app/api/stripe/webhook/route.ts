@@ -90,6 +90,26 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Se ainda não temos subscription, tentar refetch da sessão
+          if (!subscriptionId) {
+            try {
+              console.log("ℹ️ [Webhook] Rebuscando sessão para obter subscription...");
+              const freshSession = await stripe.checkout.sessions.retrieve(session.id, {
+                expand: ["subscription"],
+              });
+              if (freshSession.subscription) {
+                if (typeof freshSession.subscription === "string") {
+                  subscriptionId = freshSession.subscription;
+                } else {
+                  subscription = freshSession.subscription;
+                  subscriptionId = subscription.id;
+                }
+              }
+            } catch (error) {
+              console.warn("⚠️ [Webhook] Falha ao rebuscar sessão:", error);
+            }
+          }
+
           // Se ainda não encontrou subscription_id na sessão, buscar no customer
           if (customerId && !subscriptionId) {
             try {
