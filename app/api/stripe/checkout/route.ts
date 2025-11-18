@@ -79,6 +79,12 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "subscription",
+      subscription_data: {
+        metadata: {
+          userId,
+          plan,
+        },
+      },
       locale: "pt-BR", // Configurar locale para português brasileiro (resolve erro "Cannot find module './en'")
       success_url: `${request.nextUrl.origin}/dashboard/conta?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${request.nextUrl.origin}/dashboard/conta?canceled=true`,

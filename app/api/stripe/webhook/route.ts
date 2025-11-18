@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { updateUserProfile } from "@/lib/supabase/database";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { STRIPE_PRICE_IDS } from "@/lib/stripe/prices";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 });
+
+type SupportedPlan = "free" | "pro" | "premium";
+
+const normalizePlan = (plan?: string | null): SupportedPlan | null => {
+  if (plan === "free" || plan === "pro" || plan === "premium") {
+    return plan;
+  }
+  return null;
+};
+
+const priceIdToPlan = (priceId?: string | null): SupportedPlan | null => {
+  if (!priceId) return null;
+  if (priceId === STRIPE_PRICE_IDS.pro) return "pro";
+  if (priceId === STRIPE_PRICE_IDS.premium) return "premium";
+  return null;
+};
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 
@@ -36,10 +53,10 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
-        const plan = session.metadata?.plan;
+        const planFromMetadata = normalizePlan(session.metadata?.plan);
 
-        if (userId && plan) {
-          console.log(`✅ [Webhook] Checkout completado - Usuário: ${userId}, Plano: ${plan}`);
+        if (userId) {
+          console.log(`✅ [Webhook] Checkout completado - Usuário: ${userId}, Plano (metadata): ${planFromMetadata}`);
           
           // Obter customer_id e subscription_id da sessão
           // No modo subscription, o Stripe cria automaticamente customer e subscription
@@ -53,14 +70,28 @@ export async function POST(request: NextRequest) {
               : (session.customer as Stripe.Customer).id;
           }
 
+          let subscription: Stripe.Subscription | null = null;
+
           // session.subscription pode ser string (ID) ou objeto Subscription expandido
           if (session.subscription) {
-            subscriptionId = typeof session.subscription === "string" 
+            const sessionSubscriptionId = typeof session.subscription === "string" 
               ? session.subscription 
               : (session.subscription as Stripe.Subscription).id;
+            try {
+              subscription = await stripe.subscriptions.retrieve(sessionSubscriptionId);
+              subscriptionId = subscription.id;
+              console.log("🔥 [Webhook] Assinatura carregada via Stripe:", {
+                subscriptionId,
+                status: subscription.status,
+                current_period_end: subscription.current_period_end,
+              });
+            } catch (error) {
+              console.warn("⚠️ [Webhook] Não foi possível recuperar subscription diretamente da sessão:", error);
+              subscriptionId = sessionSubscriptionId;
+            }
           }
 
-          // Se não encontrou subscription_id na sessão, buscar no customer
+          // Se ainda não encontrou subscription_id na sessão, buscar no customer
           if (customerId && !subscriptionId) {
             try {
               const subscriptions = await stripe.subscriptions.list({
@@ -69,24 +100,72 @@ export async function POST(request: NextRequest) {
                 limit: 1,
               });
               if (subscriptions.data.length > 0) {
-                subscriptionId = subscriptions.data[0].id;
+                subscription = subscriptions.data[0];
+                subscriptionId = subscription.id;
               }
             } catch (error) {
               console.warn("⚠️ [Webhook] Erro ao buscar subscriptions do customer:", error);
             }
           }
 
+          const planToPersist =
+            planFromMetadata ||
+            normalizePlan(subscription?.metadata?.plan) ||
+            priceIdToPlan(subscription?.items?.data?.[0]?.price?.id);
+
+          if (!planToPersist) {
+            console.warn("⚠️ [Webhook] Plano não identificado para a assinatura", {
+              planFromMetadata,
+              subscriptionMetadataPlan: subscription?.metadata?.plan,
+              priceId: subscription?.items?.data?.[0]?.price?.id,
+            });
+          }
+
           // Atualizar perfil com plano e IDs do Stripe
           await updateUserProfile(userId, {
-            plano: plan as "free" | "pro" | "premium",
+            plano: planToPersist || "pro",
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
           });
 
           console.log(`✅ [Webhook] IDs salvos - Customer: ${customerId}, Subscription: ${subscriptionId}`);
         } else {
-          console.warn("⚠️ [Webhook] Checkout completado mas metadata incompleta:", { userId, plan });
+          console.warn("⚠️ [Webhook] Checkout completado mas metadata incompleta:", { userId, plan: planFromMetadata });
         }
+        break;
+      }
+
+      case "customer.subscription.created": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const userId = subscription.metadata?.userId;
+        const customerId = typeof subscription.customer === "string"
+          ? subscription.customer
+          : subscription.customer.id;
+
+        const plan =
+          normalizePlan(subscription.metadata?.plan) ||
+          priceIdToPlan(subscription.items?.data?.[0]?.price?.id);
+
+        if (!userId) {
+          console.warn("⚠️ [Webhook] Subscription criada sem metadata.userId", {
+            subscriptionId: subscription.id,
+          });
+          break;
+        }
+
+        if (!plan) {
+          console.warn("⚠️ [Webhook] Subscription criada sem plano identificável", {
+            subscriptionId: subscription.id,
+            metadataPlan: subscription.metadata?.plan,
+          });
+        }
+
+        await updateUserProfile(userId, {
+          plano: plan || "pro",
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+        });
+        console.log(`✅ [Webhook] Subscription criada registrada para usuário ${userId}`);
         break;
       }
 
@@ -105,9 +184,20 @@ export async function POST(request: NextRequest) {
         const customerId = typeof subscription.customer === "string" 
           ? subscription.customer 
           : (subscription.customer as Stripe.Customer).id;
+
+        const userIdFromMetadata = subscription.metadata?.userId;
         
         console.log(`ℹ️ [Webhook] Subscription deletada: ${subscription.id}, Customer: ${customerId}`);
         
+        if (userIdFromMetadata) {
+          await updateUserProfile(userIdFromMetadata, {
+            plano: "free",
+            stripe_subscription_id: null,
+          });
+          console.log(`✅ [Webhook] Usuário ${userIdFromMetadata} downgradeado para free via metadata`);
+          break;
+        }
+
         // Buscar usuário pelo stripe_customer_id
         if (customerId && supabaseAdmin) {
           const { data: users } = await supabaseAdmin
