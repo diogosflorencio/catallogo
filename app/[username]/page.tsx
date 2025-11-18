@@ -121,32 +121,34 @@ export default function PublicProfilePage() {
             >
               Meus Catálogos
             </motion.h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {catalogos.map((catalogo, index) => (
                 <motion.div
                   key={catalogo.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
-                  className="bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-150 border border-foreground/[0.03] dark:border-foreground/[0.08] hover:border-primary/20"
+                  transition={{ delay: index * 0.02, type: "spring", stiffness: 100 }}
+                  className="group relative bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-150 cursor-pointer"
                 >
-                  <div className="p-4">
-                    <h3 className="font-display font-semibold text-sm mb-2 text-foreground dark:text-foreground/90">
-                      {catalogo.nome}
-                    </h3>
-                    {catalogo.descricao && (
-                      <p className="text-xs text-foreground/60 dark:text-foreground/50 mb-4 line-clamp-3">
-                        {catalogo.descricao}
-                      </p>
-                    )}
-                    <Link
-                      href={`/${username}/${catalogo.slug}`}
-                      className="w-full bg-primary hover:bg-primary/90 text-white dark:text-foreground rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-xs font-medium"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Ver Catálogo
-                    </Link>
-                  </div>
+                  <Link
+                    href={`/${username}/${catalogo.slug}`}
+                    className="block"
+                  >
+                    <div className="p-2.5">
+                      <h3 className="font-display font-semibold text-xs mb-1.5 line-clamp-2 leading-tight text-foreground dark:text-foreground/90">
+                        {catalogo.nome}
+                      </h3>
+                      {catalogo.descricao && (
+                        <p className="text-[10px] text-foreground/60 dark:text-foreground/50 mb-2.5 line-clamp-2 leading-tight">
+                          {catalogo.descricao}
+                        </p>
+                      )}
+                      <div className="w-full bg-primary hover:bg-primary/90 text-white dark:text-foreground rounded-lg py-1.5 px-3 flex items-center justify-center gap-1.5 transition-colors text-[10px] font-medium">
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Ver</span>
+                      </div>
+                    </div>
+                  </Link>
                 </motion.div>
               ))}
             </div>

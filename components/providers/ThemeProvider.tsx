@@ -38,46 +38,22 @@ export function ThemeProvider({
     applyAppearance(userAppearance || "feminine"); // Aplicar feminino como padrão se null
     
     if (isLandingPage) {
-      // Landing page: sempre usa preferência do sistema
-      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = systemPrefersDark ? "dark" : "light";
-      setThemeState("system");
-      setEffectiveTheme(initialTheme);
-      applyTheme(initialTheme);
-      
-      // Listener para mudanças na preferência do sistema
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = (e: MediaQueryListEvent) => {
-        const newTheme = e.matches ? "dark" : "light";
-        setEffectiveTheme(newTheme);
-        applyTheme(newTheme);
-      };
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
+      // Landing page: sempre tema claro
+      setThemeState("light");
+      setEffectiveTheme("light");
+      applyTheme("light");
     } else {
-      // Dashboard/Catálogos: usa tema do usuário ou preferência do sistema
+      // Dashboard/Catálogos públicos: usa tema do usuário ou padrão claro
       const userTheme = userProfile?.theme;
       if (userTheme === "light" || userTheme === "dark") {
         setThemeState(userTheme);
         setEffectiveTheme(userTheme);
         applyTheme(userTheme);
       } else {
-        // null = usar preferência do sistema
-        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const initialTheme = systemPrefersDark ? "dark" : "light";
-        setThemeState("system");
-        setEffectiveTheme(initialTheme);
-        applyTheme(initialTheme);
-        
-        // Listener para mudanças na preferência do sistema
-        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        const handleChange = (e: MediaQueryListEvent) => {
-          const newTheme = e.matches ? "dark" : "light";
-          setEffectiveTheme(newTheme);
-          applyTheme(newTheme);
-        };
-        mediaQuery.addEventListener("change", handleChange);
-        return () => mediaQuery.removeEventListener("change", handleChange);
+        // null = usar tema claro como padrão
+        setThemeState("light");
+        setEffectiveTheme("light");
+        applyTheme("light");
       }
     }
   }, [isLandingPage, userProfile?.theme, userProfile?.appearance]);

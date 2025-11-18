@@ -21,7 +21,7 @@ interface PublicCatalogoViewProps {
 // Componente de Skeleton Loader
 function ProductSkeleton() {
   return (
-    <div className="bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden border border-foreground/[0.03] dark:border-foreground/[0.08] animate-pulse">
+    <div className="bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden animate-pulse">
       <div className="aspect-[3/4] bg-foreground/10" />
       <div className="p-1.5 space-y-2">
         <div className="h-3 bg-foreground/10 rounded w-3/4" />
@@ -337,7 +337,7 @@ export function PublicCatalogoView({ data, username, catalogSlug }: PublicCatalo
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.02, type: "spring", stiffness: 100 }}
                   onClick={() => handleProductClick(produto)}
-                  className="group relative bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-150 cursor-pointer border border-foreground/[0.03] dark:border-foreground/[0.08] hover:border-primary/20"
+                  className="group relative bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-150 cursor-pointer"
                 >
                   {primeiraImagem ? (
                     <div className="relative aspect-[3/4] overflow-hidden">
