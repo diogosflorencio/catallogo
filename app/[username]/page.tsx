@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { UserProfile, Catalogo } from "@/lib/supabase/database";
 import { Loading } from "@/components/ui/Loading";
@@ -53,83 +54,127 @@ export default function PublicProfilePage() {
 
   return (
     <ThemeProvider userProfile={user} isLandingPage={false}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background dark:bg-[#0f0f0f] flex flex-col">
       {/* Header */}
-      <header className="border-b border-blush/20 bg-background-alt/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4">
-            {user.custom_photo_url ? (
-              <img
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="border-b border-foreground/[0.03] dark:border-foreground/[0.08] bg-background-alt dark:bg-[#181818] sticky top-0 z-50"
+      >
+        <div className="max-w-7xl mx-auto px-3 py-3">
+          <div className="flex items-center gap-3">
+            {user.custom_photo_url && (
+              <motion.img
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: "spring" }}
                 src={user.custom_photo_url}
                 alt={user.nome_loja || user.username || ""}
-                className="w-16 h-16 rounded-full object-cover"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20"
                 onError={(e) => {
-                  console.error("Erro ao carregar imagem de perfil:", user.custom_photo_url);
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
-            ) : null}
-            <div>
-              <h1 className="font-display font-semibold text-2xl">
+            )}
+            <div className="flex-1 min-w-0">
+              <motion.h1
+                initial={{ x: -10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="font-display font-semibold text-base truncate text-foreground dark:text-foreground/90"
+              >
                 {user.nome_loja || user.username}
-              </h1>
+              </motion.h1>
               {user.username && (
-                <p className="text-sm text-foreground/60">@{user.username}</p>
+                <motion.p
+                  initial={{ x: -10, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-[10px] text-foreground/60 dark:text-foreground/50 truncate"
+                >
+                  @{user.username}
+                </motion.p>
               )}
             </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-3 py-6 flex-1 pb-16">
         {catalogos.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-foreground/60">Nenhum catálogo público disponível</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16"
+          >
+            <p className="text-foreground/60 dark:text-foreground/50">Nenhum catálogo público disponível</p>
+          </motion.div>
         ) : (
           <>
-            <h2 className="font-display font-semibold text-xl mb-6">
+            <motion.h2
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="font-display font-semibold text-lg mb-4 text-foreground dark:text-foreground/90"
+            >
               Meus Catálogos
-            </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {catalogos.map((catalogo) => (
-                      <div
-                        key={catalogo.id}
-                        className="bg-background-alt rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div className="p-6">
-                          <h3 className="font-display font-semibold text-lg mb-2">
-                            {catalogo.nome}
-                          </h3>
-                          {catalogo.descricao && (
-                            <p className="text-sm text-foreground/60 mb-4 line-clamp-3">
-                              {catalogo.descricao}
-                            </p>
-                          )}
-                          <div className="flex flex-col gap-2">
-                            <Link
-                              href={`/${username}/${catalogo.slug}`}
-                              className="w-full bg-primary hover:bg-primary/90 text-foreground rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-sm"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              Ver Catálogo
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+            </motion.h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {catalogos.map((catalogo, index) => (
+                <motion.div
+                  key={catalogo.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
+                  className="bg-background-alt dark:bg-[#181818] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-150 border border-foreground/[0.03] dark:border-foreground/[0.08] hover:border-primary/20"
+                >
+                  <div className="p-4">
+                    <h3 className="font-display font-semibold text-sm mb-2 text-foreground dark:text-foreground/90">
+                      {catalogo.nome}
+                    </h3>
+                    {catalogo.descricao && (
+                      <p className="text-xs text-foreground/60 dark:text-foreground/50 mb-4 line-clamp-3">
+                        {catalogo.descricao}
+                      </p>
+                    )}
+                    <Link
+                      href={`/${username}/${catalogo.slug}`}
+                      className="w-full bg-primary hover:bg-primary/90 text-white dark:text-foreground rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-xs font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Ver Catálogo
+                    </Link>
                   </div>
+                </motion.div>
+              ))}
+            </div>
           </>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-blush/20 mt-16 py-8">
-        <div className="container mx-auto px-4 text-center text-foreground/60 text-sm">
-          <p>Powered by Catallogo</p>
+      <motion.footer
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="fixed bottom-0 left-0 right-0 bg-background-alt dark:bg-[#181818] border-t border-foreground/[0.03] dark:border-foreground/[0.08] py-1.5 z-40"
+      >
+        <div className="max-w-7xl mx-auto px-3 flex items-center justify-center gap-2 text-[10px] text-foreground/60 dark:text-foreground/50">
+          <Sparkles className="w-2.5 h-2.5 text-primary" />
+          <span>Criado com</span>
+          <a 
+            href="/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-primary font-medium hover:underline inline-flex items-center gap-0.5"
+          >
+            Catallogo
+            <ExternalLink className="w-2.5 h-2.5" />
+          </a>
         </div>
-      </footer>
+      </motion.footer>
       </div>
     </ThemeProvider>
   );

@@ -47,9 +47,9 @@
   --blush: #E8A4B8; /* Rosa mantido */
   --peach: #D4A5C7; /* Pêssego mais escuro/roxo */
   --lavender: #B19CD9; /* Lavanda mais vibrante */
-  --background: #0A0A0F; /* Preto profundo */
-  --background-alt: #1A1A24; /* Cinza escuro */
-  --foreground: #F5F5F5; /* Texto claro */
+  --background: #0f0f0f; /* Preto estilo YouTube */
+  --background-alt: #181818; /* Cinza escuro estilo YouTube */
+  --foreground: #f1f1f1; /* Texto menos contrastante */
   
   --primary: var(--blush);
   --secondary: var(--peach);
@@ -61,9 +61,9 @@
   --blue-primary: #5BA3F0; /* Azul mais claro para dark mode */
   --blue-secondary: #7BB3E8;
   --blue-accent: #6C9BC4;
-  --background: #0A0A0F; /* Preto profundo */
-  --background-alt: #1A1A24; /* Cinza escuro */
-  --foreground: #F5F5F5; /* Texto claro */
+  --background: #0f0f0f; /* Preto estilo YouTube */
+  --background-alt: #181818; /* Cinza escuro estilo YouTube */
+  --foreground: #f1f1f1; /* Texto menos contrastante */
   
   --primary: var(--blue-primary);
   --secondary: var(--blue-secondary);
@@ -76,9 +76,9 @@
     --blush: #E8A4B8;
     --peach: #D4A5C7;
     --lavender: #B19CD9;
-    --background: #0A0A0F;
-    --background-alt: #1A1A24;
-    --foreground: #F5F5F5;
+    --background: #0f0f0f;
+    --background-alt: #181818;
+    --foreground: #f1f1f1;
     
     --primary: var(--blush);
     --secondary: var(--peach);
@@ -90,9 +90,9 @@
     --blue-primary: #5BA3F0;
     --blue-secondary: #7BB3E8;
     --blue-accent: #6C9BC4;
-    --background: #0A0A0F;
-    --background-alt: #1A1A24;
-    --foreground: #F5F5F5;
+    --background: #0f0f0f;
+    --background-alt: #181818;
+    --foreground: #f1f1f1;
     
     --primary: var(--blue-primary);
     --secondary: var(--blue-secondary);
@@ -124,21 +124,31 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Sutil */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background-alt);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 4px;
+  background: var(--foreground);
+  opacity: 0.1;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  opacity: 0.2;
+}
+
+/* Dark mode scrollbar mais sutil */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  opacity: 0.15;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  opacity: 0.25;
 }

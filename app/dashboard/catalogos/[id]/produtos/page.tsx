@@ -8,7 +8,7 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { Modal } from "@/components/ui/Modal";
-import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff, ArrowUpDown, ArrowUp, ArrowDown, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
@@ -28,6 +28,7 @@ export default function ProdutosPage({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; produtoId: string | null }>({ isOpen: false, produtoId: null });
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: "" });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
 
   useEffect(() => {
     async function loadParams() {
@@ -90,6 +91,30 @@ export default function ProdutosPage({
     setDeleteModal({ isOpen: true, produtoId });
   }
 
+  function handleSortToggle() {
+    if (sortOrder === null) {
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else {
+      setSortOrder(null);
+    }
+  }
+
+  // Ordenar produtos por preço
+  const sortedProdutos = [...produtos].sort((a, b) => {
+    if (sortOrder === null) return 0;
+    
+    const precoA = a.preco || 0;
+    const precoB = b.preco || 0;
+    
+    if (sortOrder === "asc") {
+      return precoA - precoB;
+    } else {
+      return precoB - precoA;
+    }
+  });
+
   async function handleDeleteConfirm() {
     if (!user || !catalogoId || !deleteModal.produtoId) return;
     
@@ -147,25 +172,54 @@ export default function ProdutosPage({
     <DashboardLayout profile={profile}>
       <div className="pb-6">
         {/* Header compacto */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-display font-semibold mb-1">
-              {catalogo.nome}
-            </h2>
-            <p className="text-sm text-foreground/60">
-              {produtos.length} de {profile.plano === "free" ? "3" : "∞"} produto{produtos.length !== 1 ? "s" : ""}
-            </p>
+        <div className="mb-6 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-display font-semibold mb-1">
+                {catalogo.nome}
+              </h2>
+              <p className="text-sm text-foreground/60">
+                {produtos.length} de {profile.plano === "free" ? "3" : "∞"} produto{produtos.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {produtos.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handleSortToggle}
+                  className="w-full sm:w-auto"
+                  title={sortOrder === null ? "Ordenar por preço" : sortOrder === "asc" ? "Preço: Menor para Maior" : "Preço: Maior para Menor"}
+                >
+                  {sortOrder === null ? (
+                    <>
+                      <ArrowUpDown className="w-4 h-4 mr-2" />
+                      Ordenar
+                    </>
+                  ) : sortOrder === "asc" ? (
+                    <>
+                      <ArrowUp className="w-4 h-4 mr-2" />
+                      Menor → Maior
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDown className="w-4 h-4 mr-2" />
+                      Maior → Menor
+                    </>
+                  )}
+                </Button>
+              )}
+              <Link href={`/dashboard/catalogos/${catalogoId}/produtos/novo`}>
+                <Button
+                  disabled={profile.plano === "free" && produtos.length >= 3}
+                  title={profile.plano === "free" && produtos.length >= 3 ? "Limite de 3 produtos atingido no plano free" : ""}
+                  className="w-full sm:w-auto"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Produto
+                </Button>
+              </Link>
+            </div>
           </div>
-          <Link href={`/dashboard/catalogos/${catalogoId}/produtos/novo`}>
-            <Button
-              disabled={profile.plano === "free" && produtos.length >= 3}
-              title={profile.plano === "free" && produtos.length >= 3 ? "Limite de 3 produtos atingido no plano free" : ""}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Produto
-            </Button>
-          </Link>
         </div>
 
         {/* Empty State */}
@@ -180,11 +234,14 @@ export default function ProdutosPage({
           </div>
         ) : (
           /* Grid de produtos - Mais compacto */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {produtos.map((produto, index) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+            {sortedProdutos.map((produto, index) => {
               const imagens = (produto.imagens_urls && Array.isArray(produto.imagens_urls) && produto.imagens_urls.length > 0)
                 ? produto.imagens_urls
                 : (produto.imagem_url ? [produto.imagem_url] : []);
+              
+              const primeiraImagem = imagens[0] || null;
+              const quantidadeImagens = imagens.length;
               
               return (
                 <motion.div
@@ -194,38 +251,35 @@ export default function ProdutosPage({
                   transition={{ delay: index * 0.05 }}
                   className="bg-background-alt rounded-lg overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border border-foreground/5"
                 >
-                  {/* Imagem do produto - Compacta */}
-                  {imagens.length > 0 && (
-                    <div className="relative aspect-square overflow-hidden bg-foreground/5">
-                      {imagens.length === 1 ? (
-                        <img
-                          src={imagens[0]}
-                          alt={produto.nome}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="grid grid-cols-2 h-full gap-[1px]">
-                          {imagens.slice(0, 4).map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={img}
-                              alt={`${produto.nome} - ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          ))}
+                  {/* Imagem do produto - Apenas primeira imagem */}
+                  {primeiraImagem && (
+                    <div className="relative aspect-[4/3] overflow-hidden bg-foreground/5">
+                      <img
+                        src={primeiraImagem}
+                        alt={produto.nome}
+                        className="w-full h-full object-cover"
+                      />
+                      
+                      {/* Badge de quantidade de imagens no canto superior direito */}
+                      {quantidadeImagens > 1 && (
+                        <div className="absolute top-1.5 right-1.5">
+                          <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-black/60 text-white font-medium backdrop-blur-sm">
+                            <ImageIcon className="w-2.5 h-2.5" />
+                            {quantidadeImagens}
+                          </span>
                         </div>
                       )}
                       
-                      {/* Badge de status sobre a imagem */}
-                      <div className="absolute top-2 right-2">
+                      {/* Badge de status no canto superior esquerdo */}
+                      <div className="absolute top-1.5 left-1.5">
                         {produto.visivel ? (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-green-500/90 text-white font-medium backdrop-blur-sm">
-                            <Eye className="w-3 h-3" />
+                          <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/90 text-white font-medium backdrop-blur-sm">
+                            <Eye className="w-2.5 h-2.5" />
                             Visível
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gray-500/90 text-white font-medium backdrop-blur-sm">
-                            <EyeOff className="w-3 h-3" />
+                          <span className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-500/90 text-white font-medium backdrop-blur-sm">
+                            <EyeOff className="w-2.5 h-2.5" />
                             Oculto
                           </span>
                         )}
@@ -234,25 +288,25 @@ export default function ProdutosPage({
                   )}
                   
                   {/* Conteúdo compacto */}
-                  <div className="p-3">
-                    <h3 className="font-display font-semibold text-sm mb-1 line-clamp-2 leading-tight">
+                  <div className="p-2">
+                    <h3 className="font-display font-semibold text-xs mb-0.5 line-clamp-2 leading-tight">
                       {produto.nome}
                     </h3>
                     
                     {produto.descricao && (
-                      <p className="text-xs text-foreground/50 mb-2 line-clamp-1">
+                      <p className="text-[10px] text-foreground/50 mb-1.5 line-clamp-1">
                         {produto.descricao}
                       </p>
                     )}
                     
                     {produto.preco && (
-                      <p className="font-bold text-primary mb-3 text-base">
+                      <p className="font-bold text-primary mb-2 text-sm">
                         {formatPrice(Number(produto.preco))}
                       </p>
                     )}
                     
                     {/* Botões compactos */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <Link
                         href={`/dashboard/catalogos/${catalogoId}/produtos/${produto.id}/editar`}
                         className="flex-1"
@@ -260,9 +314,9 @@ export default function ProdutosPage({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="w-full text-xs h-8"
+                          className="w-full text-[10px] h-7 px-2"
                         >
-                          <Edit className="w-3 h-3 mr-1" />
+                          <Edit className="w-2.5 h-2.5 mr-1" />
                           Editar
                         </Button>
                       </Link>
@@ -271,9 +325,9 @@ export default function ProdutosPage({
                         size="sm"
                         onClick={() => handleDeleteClick(produto.id)}
                         disabled={deleting === produto.id}
-                        className="flex-1 text-xs h-8"
+                        className="flex-1 text-[10px] h-7 px-2"
                       >
-                        <Trash2 className="w-3 h-3 mr-1" />
+                        <Trash2 className="w-2.5 h-2.5 mr-1" />
                         {deleting === produto.id ? "..." : "Excluir"}
                       </Button>
                     </div>
