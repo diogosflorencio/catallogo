@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
               console.log("🔥 [Webhook] Assinatura carregada via Stripe:", {
                 subscriptionId,
                 status: subscription.status,
-                current_period_end: (subscription as Record<string, unknown>)["current_period_end"],
               });
             } catch (error) {
               console.warn("⚠️ [Webhook] Não foi possível recuperar subscription diretamente da sessão:", error);
