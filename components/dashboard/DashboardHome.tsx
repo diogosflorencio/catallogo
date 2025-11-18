@@ -146,7 +146,7 @@ export function DashboardHome({ catalogos, profile }: DashboardHomeProps) {
                   <p className="text-xs font-semibold text-foreground mb-1.5 px-1">
                     Ou catálogos específicos:
                   </p>
-                  <div className={`space-y-2 transition-all ${linksExpanded ? '' : 'max-h-[28px] overflow-hidden'}`}>
+                  <div className={`space-y-2 transition-all ${linksExpanded ? '' : 'max-h-[0px] overflow-hidden'}`}>
                     {catalogos.map((catalogo) => (
                       <div key={catalogo.id} className="p-3 bg-background rounded-lg border border-blush/20">
                         <div className="flex items-center justify-between gap-2">
